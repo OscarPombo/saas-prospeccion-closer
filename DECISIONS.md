@@ -46,6 +46,24 @@ La verificación de identidad de Hetzner tarda 24-48h. Para no bloquear el arran
 
 ---
 
+## 2026-06-09 — Despliegue de schema vía Postgres directo (no via REST API)
+
+La `SUPABASE_SERVICE_KEY` en formato `sb_secret_...` devuelve 401 en la REST API de Supabase — el formato correcto es el JWT (`eyJ...`) que está en Dashboard → Settings → API → service_role secret. Pendiente que el founder lo actualice en `.env`.
+
+**Workaround para schema:** conexión Postgres directa con `SUPABASE_DB_PASSWORD` vía librería `pg`. Creado `scripts/deploy-schema.js` y `scripts/seed-founder.js`.
+
+---
+
+## 2026-06-09 — Contraseñas con caracteres especiales en .env deben ir entre comillas
+
+`SUPABASE_DB_PASSWORD=J#?/fHxD7_ZfuK9` → dotenv interpreta `#` como inicio de comentario y pasa solo `J` como contraseña.
+
+**Fix aplicado:** `SUPABASE_DB_PASSWORD="J#?/fHxD7_ZfuK9"` (valor entre comillas dobles).
+
+**Regla general:** cualquier valor en `.env` que contenga `#`, `=` o espacios debe ir entre comillas dobles.
+
+---
+
 ## 2026-06-08 — Otras confirmaciones del founder (sin cambios sobre el brief)
 
 - Telegram: vínculo 1:1 con el bot (no grupo/canal).
