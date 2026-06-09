@@ -1,0 +1,32 @@
+# Secrets — NUNCA commitear
+.env
+.env.local
+.env.*.local
+.env.production
+*.env
+
+# n8n data local
+n8n_data/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Supabase local
+.supabase/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Audios procesados (pesados, no van al repo)
+audios-tono/*.webm
+audios-tono/*.mp3
+audios-tono/*.m4a
+# .ogg sí van si son los definitivos del founder hardcodeado
