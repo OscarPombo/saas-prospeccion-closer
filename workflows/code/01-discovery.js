@@ -48,10 +48,16 @@ async function supabaseUpsert(table, rows) {
 }
 
 // ── Hashtags para nicho ia-negocios ──────────────────────────────────────────
+// Mix de hashtags grandes (infoproductores establecidos los usan) + específicos de IA
 const HASHTAGS = [
+  // Específicos IA en español
   'ianegocios', 'cursosdeia', 'iaparaemprendedores',
-  'promptengineering', 'chatgptnegocios', 'automatizacionia',
-  'inteligenciaartificialnegocios',
+  'chatgptnegocios', 'automatizacionempresarial',
+  // Infoproducción general (más cuentas establecidas)
+  'infoproductor', 'negociosonline', 'cursosonline',
+  'mentoriaonline', 'marketingdigital',
+  // IA amplio (incluye cuentas grandes)
+  'inteligenciaartificial',
 ];
 const directUrls = HASHTAGS.map(h => `https://www.instagram.com/explore/tags/${h}/`);
 

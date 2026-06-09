@@ -28,20 +28,24 @@ async function sbInsert(table, rows) {
   return r.json();
 }
 
-// Palabras que delatan que la bio NO es en español (otros idiomas comunes)
-const NON_ES_HINTS = ['i am', 'i help', 'follow me', 'dm me', 'link in bio',
-  'curso de', 'sou ', 'meu ', 'nosso ', 'aprenda ', 'você ', 'negócios',  // pt-BR
+// Rechazar bios claramente en otro idioma (estrategia permisiva: solo bloquear lo obvio)
+const NON_ES_HINTS = [
+  // Inglés
+  'i am ', 'i help ', 'i teach', 'follow me', 'dm for', 'i show', 'i share',
+  'building', 'founder & ceo', 'speaker &',
+  // Portugués (pt-BR) — expandido
+  'sou ', 'meu ', 'nosso ', 'aprenda ', 'você ', 'negócios', 'ajudo ',
+  'criador', 'conteúdo', 'somos um', 'somos uma', 'hub de', 'inovação',
+  'tecnologia m', 'plataforma c', 'aprenda a', 'ajudamos',
+  // Francés
+  'je suis', 'je vous',
 ];
 
 function looksSpanish(bio) {
-  if (!bio) return false;
+  if (!bio) return true;  // Sin bio → no podemos saber, dejar pasar
   const b = bio.toLowerCase();
-  // Si tiene indicadores de otro idioma, rechazar
-  if (NON_ES_HINTS.some(h => b.includes(h))) return false;
-  // Si tiene palabras españolas comunes del nicho, aceptar
-  const esWords = ['negocio', 'empresa', 'curso', 'formación', 'automatiz', 'inteligencia',
-    'mentor', 'emprendedor', 'estrategia', 'marca', 'cliente', 'aprende', 'revenue'];
-  return esWords.some(w => b.includes(w));
+  // Rechazar solo si hay señales claras de otro idioma
+  return !NON_ES_HINTS.some(h => b.includes(h));
 }
 
 // Obtener nicho ia-negocios
@@ -65,7 +69,8 @@ for (const rp of rawProspects) {
   const spanishBio = looksSpanish(p.biography);
 
   // Filtros duros: followers, landing, idioma
-  if (followers < 5000 || followers > 100000) continue;
+  // Sprint 1: mínimo 3K (nicho IA con infoproductores más pequeños que otros nichos)
+  if (followers < 3000 || followers > 100000) continue;
   if (!hasLanding) continue;
   if (!spanishBio) continue;
 

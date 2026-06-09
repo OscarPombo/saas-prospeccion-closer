@@ -64,6 +64,26 @@ La `SUPABASE_SERVICE_KEY` en formato `sb_secret_...` devuelve 401 en la REST API
 
 ---
 
+## 2026-06-09 — Filtro followers Sprint 1 bajado a 3K (en vez de 5K del brief)
+
+**Motivo:** el nicho ia-negocios tiene infoproductores más pequeños que otros nichos; los hashtags `#ianegocios` etc. devolvieron 33/41 cuentas con <5K followers pero algunas con audiencia real de 3-5K ya venden cursos high-ticket. Con Meta Ad Library (sprint 2) el señal de "tiene ads activos" sustituye al floor de followers y se puede volver a 5K.
+
+**Impacto:** en `02-enrichment.js`, floor = 3000 en lugar de 5000.
+
+---
+
+## 2026-06-09 — Detección de español cambiada a estrategia permisiva (rechazar obvio no-español)
+
+**Motivo:** la estrategia anterior (requerir palabras españolas en la bio) rechazaba cuentas válidas con bios de emojis/shorthand (ej. `@christianvergara10` con banderas LATAM). La nueva estrategia rechaza solo bios con señales claras de inglés/portugués/francés.
+
+---
+
+## 2026-06-09 — Hashtags de discovery ampliados a mix específico+general
+
+**Motivo:** hashtags muy específicos (`#ianegocios`, `#cursosdeia`) atraen casi solo micro-cuentas (<5K). Mix actual añade hashtags de infoproducción general (`#infoproductor`, `#cursosonline`, `#mentoriaonline`) para capturar cuentas establecidas.
+
+---
+
 ## 2026-06-08 — Otras confirmaciones del founder (sin cambios sobre el brief)
 
 - Telegram: vínculo 1:1 con el bot (no grupo/canal).

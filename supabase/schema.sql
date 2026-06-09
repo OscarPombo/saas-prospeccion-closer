@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS qualified_prospects (
 -- Análisis profundo cacheado (reutilizable 7 días entre closers)
 CREATE TABLE IF NOT EXISTS prospect_analyses (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  prospect_id         uuid REFERENCES qualified_prospects(id),
+  prospect_id         uuid UNIQUE REFERENCES qualified_prospects(id),
   funnel_summary      text,
   vsl_transcript      text,
   creatives_analysis  jsonb,

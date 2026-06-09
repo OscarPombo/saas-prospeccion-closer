@@ -81,7 +81,17 @@ const todayAssignments = await sbGet(
 );
 const alreadyAssigned = new Set(todayAssignments.map(a => a.prospect_id));
 
-const candidates = analyses.filter(a => !alreadyAssigned.has(a.prospect_id));
+// Deduplicar por handle (puede haber varias entradas del mismo infoproductor)
+const seenHandles = new Set();
+const dedupedCandidates = [];
+for (const a of analyses) {
+  const [qp] = await sbGet(`qualified_prospects?id=eq.${a.prospect_id}&select=handle`);
+  if (qp && !seenHandles.has(qp.handle) && !alreadyAssigned.has(a.prospect_id)) {
+    seenHandles.add(qp.handle);
+    dedupedCandidates.push(a);
+  }
+}
+const candidates = dedupedCandidates;
 const top = candidates.slice(0, 5);
 console.log(`Candidatos: ${candidates.length} — Seleccionados: ${top.length}`);
 
