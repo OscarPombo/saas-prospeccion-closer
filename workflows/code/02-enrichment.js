@@ -1,0 +1,90 @@
+// Stage 2: Enriquecimiento y filtro duro
+// Filtros: followers 5K-100K, externalUrl presente, biography en español
+// Lee raw_prospects de las últimas 2h y guarda en qualified_prospects.
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+const SB_HEADERS = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'apikey': SUPABASE_KEY,
+};
+
+async function sbGet(path) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: SB_HEADERS });
+  if (!r.ok) throw new Error(`sbGet ${path}: ${await r.text()}`);
+  return r.json();
+}
+
+async function sbInsert(table, rows) {
+  if (!rows.length) return [];
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation,resolution=ignore-duplicates' },
+    body: JSON.stringify(rows),
+  });
+  if (!r.ok) throw new Error(`sbInsert ${table}: ${await r.text()}`);
+  return r.json();
+}
+
+// Palabras que delatan que la bio NO es en español (otros idiomas comunes)
+const NON_ES_HINTS = ['i am', 'i help', 'follow me', 'dm me', 'link in bio',
+  'curso de', 'sou ', 'meu ', 'nosso ', 'aprenda ', 'você ', 'negócios',  // pt-BR
+];
+
+function looksSpanish(bio) {
+  if (!bio) return false;
+  const b = bio.toLowerCase();
+  // Si tiene indicadores de otro idioma, rechazar
+  if (NON_ES_HINTS.some(h => b.includes(h))) return false;
+  // Si tiene palabras españolas comunes del nicho, aceptar
+  const esWords = ['negocio', 'empresa', 'curso', 'formación', 'automatiz', 'inteligencia',
+    'mentor', 'emprendedor', 'estrategia', 'marca', 'cliente', 'aprende', 'revenue'];
+  return esWords.some(w => b.includes(w));
+}
+
+// Obtener nicho ia-negocios
+const [niche] = await sbGet(`niches?slug=eq.ia-negocios&select=id`);
+if (!niche) throw new Error('Nicho ia-negocios no encontrado en BD');
+const nicheId = niche.id;
+
+// Leer raw_prospects de las últimas 3h sin qualified correspondiente
+const cutoff = new Date(Date.now() - 3 * 3600 * 1000).toISOString();
+const rawProspects = await sbGet(
+  `raw_prospects?source=eq.instagram&discovered_at=gte.${cutoff}&select=id,handle,raw_data`
+);
+console.log(`raw_prospects a evaluar: ${rawProspects.length}`);
+
+const qualified = [];
+
+for (const rp of rawProspects) {
+  const p = rp.raw_data;
+  const followers = p.followersCount || 0;
+  const hasLanding = !!p.externalUrl;
+  const spanishBio = looksSpanish(p.biography);
+
+  // Filtros duros: followers, landing, idioma
+  if (followers < 5000 || followers > 100000) continue;
+  if (!hasLanding) continue;
+  if (!spanishBio) continue;
+
+  qualified.push({
+    raw_prospect_id: rp.id,
+    handle: rp.handle,
+    platform_links: {
+      instagram: `https://www.instagram.com/${rp.handle}/`,
+      landing: p.externalUrl,
+    },
+    followers,
+    ads_count: 0,      // Se completará en sprint 2 con Meta Ads
+    language: 'es',
+    detected_niche_id: nicheId,
+    detected_mode: 'both',
+  });
+}
+
+console.log(`Calificados: ${qualified.length} de ${rawProspects.length}`);
+await sbInsert('qualified_prospects', qualified);
+
+return [{ json: { qualified: qualified.length, evaluated: rawProspects.length } }];
