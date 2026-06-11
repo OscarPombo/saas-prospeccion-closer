@@ -36,6 +36,23 @@ function makeScheduleTrigger(id, name, cronExpr, x, y) {
   };
 }
 
+function makeWebhookTrigger(id, name, webhookPath, x, y) {
+  return {
+    id,
+    name,
+    type: 'n8n-nodes-base.webhook',
+    typeVersion: 1,
+    position: [x, y],
+    webhookId: webhookPath, // unique stable ID used as URL path
+    parameters: {
+      httpMethod: 'POST',
+      path: webhookPath,
+      responseMode: 'onReceived',
+      options: {},
+    },
+  };
+}
+
 function makeConnections(nodeNames) {
   const connections = {};
   for (let i = 0; i < nodeNames.length - 1; i++) {
@@ -79,17 +96,34 @@ const workflow02 = {
   settings: { timezone: 'Europe/Madrid', saveExecutionProgress: true },
 };
 
+// ── Workflow 03: Telegram Callback Handler (webhook) ──────────────────────────
+const callbackNodes = [
+  makeWebhookTrigger('webhook-callback', 'Webhook', 'tg-callback', 250, 300),
+  makeCodeNode('callback-handler', 'Callback Handler', readCode('03-callback.js'), 500, 300),
+];
+
+const workflow03 = {
+  id: 'telegram-callback',
+  name: '03 Telegram Callback Handler',
+  nodes: callbackNodes,
+  connections: makeConnections(callbackNodes.map(n => n.name)),
+  active: true,
+  settings: { timezone: 'Europe/Madrid', saveExecutionProgress: true },
+};
+
 // ── Escribir JSONs ─────────────────────────────────────────────────────────────
 const file01 = path.join(OUT_DIR, '01-pipeline.json');
 const file02 = path.join(OUT_DIR, '02-delivery.json');
+const file03 = path.join(OUT_DIR, '03-callback.json');
 fs.writeFileSync(file01, JSON.stringify(workflow01, null, 2));
 fs.writeFileSync(file02, JSON.stringify(workflow02, null, 2));
+fs.writeFileSync(file03, JSON.stringify(workflow03, null, 2));
 console.log('Workflows JSON escritos.');
 
 // ── Importar en n8n via Docker ─────────────────────────────────────────────────
-const CONTAINER = 'saasprospeccioncloser-n8n-1';
+const CONTAINER = 'n8n-n8n-1';
 
-function importWorkflow(localFile, containerFile) {
+function importWorkflow(localFile) {
   const filename = path.basename(localFile);
   try {
     execSync(`docker cp "${localFile}" ${CONTAINER}:/tmp/${filename}`, { stdio: 'inherit' });
@@ -102,6 +136,7 @@ function importWorkflow(localFile, containerFile) {
 
 importWorkflow(file01);
 importWorkflow(file02);
+importWorkflow(file03);
 
 console.log('\nAbre http://localhost:5678 para ver los workflows.');
 console.log('Para activarlos: Settings → toggle Active en cada workflow.');

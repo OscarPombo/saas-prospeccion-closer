@@ -1,9 +1,35 @@
 // Stage 1: Apify discovery — hashtag posts → profile scraping → raw_prospects
-// Ejecutado como Code node (typeVersion 2) en n8n. Tiene acceso a process.env y fetch.
 
-const APIFY_TOKEN = process.env.APIFY_TOKEN;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const _https = require('https'), _http = require('http'), _URL = require('url').URL;
+function fetch(url, opts) {
+  opts = opts || {};
+  return new Promise((resolve, reject) => {
+    const u = new _URL(url);
+    const lib = u.protocol === 'https:' ? _https : _http;
+    const body = opts.body ? Buffer.from(opts.body) : null;
+    const headers = { ...(opts.headers || {}) };
+    if (body) headers['Content-Length'] = body.length;
+    const req = lib.request(
+      { hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: u.pathname + u.search, method: opts.method || 'GET', headers },
+      res => {
+        const parts = [];
+        res.on('data', c => parts.push(c));
+        res.on('end', () => {
+          const text = Buffer.concat(parts).toString('utf8');
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: () => Promise.resolve(text), json: () => Promise.resolve(JSON.parse(text)) });
+        });
+        res.on('error', reject);
+      }
+    );
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+const APIFY_TOKEN = $env.APIFY_TOKEN;
+const SUPABASE_URL = $env.SUPABASE_URL;
+const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 

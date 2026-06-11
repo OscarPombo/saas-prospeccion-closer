@@ -1,9 +1,36 @@
 // Stage 4: Matching + generación de mensajes con Claude (§8.4)
 // Selecciona top 5 prospectos para el founder, genera un mensaje por cada uno.
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const _https = require('https'), _http = require('http'), _URL = require('url').URL;
+function fetch(url, opts) {
+  opts = opts || {};
+  return new Promise((resolve, reject) => {
+    const u = new _URL(url);
+    const lib = u.protocol === 'https:' ? _https : _http;
+    const body = opts.body ? Buffer.from(opts.body) : null;
+    const headers = { ...(opts.headers || {}) };
+    if (body) headers['Content-Length'] = body.length;
+    const req = lib.request(
+      { hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: u.pathname + u.search, method: opts.method || 'GET', headers },
+      res => {
+        const parts = [];
+        res.on('data', c => parts.push(c));
+        res.on('end', () => {
+          const text = Buffer.concat(parts).toString('utf8');
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: () => Promise.resolve(text), json: () => Promise.resolve(JSON.parse(text)) });
+        });
+        res.on('error', reject);
+      }
+    );
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+const SUPABASE_URL = $env.SUPABASE_URL;
+const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
+const ANTHROPIC_KEY = $env.ANTHROPIC_API_KEY;
 const CLOSER_EMAIL = 'opombo84@gmail.com';
 
 const SB_HEADERS = {
@@ -75,9 +102,10 @@ const analyses = await sbGet(
   + `&score=gte.0&order=score.desc&limit=30`
 );
 
-// Prospectos ya asignados hoy a este closer
+// Prospectos ya asignados en los últimos 30 días a este closer
+const cutoff30d = new Date(Date.now() - 30 * 86400000).toISOString();
 const todayAssignments = await sbGet(
-  `lead_assignments?closer_id=eq.${closer.id}&assigned_at=gte.${todayStart.toISOString()}&select=prospect_id`
+  `lead_assignments?closer_id=eq.${closer.id}&assigned_at=gte.${cutoff30d}&select=prospect_id`
 );
 const alreadyAssigned = new Set(todayAssignments.map(a => a.prospect_id));
 
@@ -125,34 +153,48 @@ for (const analysis of top) {
   const opportunities = Array.isArray(analysis.value_opportunities)
     ? analysis.value_opportunities
     : [];
-  if (!opportunities.length) continue;
 
-  // Elegir la mejor oportunidad (la más específica — la primera por ahora)
-  const vo = opportunities[0];
+  // Buscar la primera oportunidad con observación válida (JSON bien formado)
+  const vo = opportunities.find(o => o && typeof o.observation === 'string' && o.observation.trim());
+  if (!vo) {
+    console.log(`  @${qp?.handle || '?'}: sin oportunidades válidas — omitido`);
+    continue;
+  }
 
-  const userPrompt = `INFOPRODUCTOR DESTINATARIO:
-Handle: @${qp.handle}
-Nicho: IA aplicada a negocios
-Seguidores: ${qp.followers}
+  // Donde se observó: landing, reel, linktree, etc.
+  const sourceLabel = vo.area === 'Reels' ? 'reel' : vo.area === 'Embudo' ? 'landing' : vo.area?.toLowerCase() || 'perfil';
 
-PUNTO DE VALOR A APORTAR:
-Área: ${vo.area}
+  const userPrompt = `INFOPRODUCTOR: @${qp.handle}
+
+LO QUE HAS OBSERVADO (no lo reveles del todo — úsalo para crear curiosidad):
+Área: ${vo.area} (${sourceLabel})
 Observación: ${vo.observation}
-Valor sugerido: ${vo.suggested_value}
+Valor que aportarías: ${vo.suggested_value}
+
+ESTRUCTURA OBLIGATORIA DEL MENSAJE (3 partes):
+1. TRIGGER: menciona dónde lo viste de forma específica. Ej: "Estaba mirando tu landing", "He visto tu reel de ayer", "Estaba leyendo tu página de X".
+2. TEASER: di que viste algo que podría [beneficio vago relacionado con el valor]. NO expliques el qué todavía. Crea curiosidad.
+3. SOFT CLOSE: "Si te interesa te cuento" / "Si quieres te comento" / "Me dices y te explico". NUNCA una pregunta abierta, NUNCA un CTA de venta.
+
+EJEMPLOS DE REFERENCIA de esta estructura (adapta el TONO al closer, no copies el contenido):
+Ejemplo A: "Estaba mirando tu linktr.ee y he visto algo que podría ahorrarte tiempo y filtraría mejor a los que quieren trabajar contigo. Si te interesa, me dices y te explico."
+Ejemplo B: "He estado leyendo la estrategia que ofreces gratuita y al final en agendar llamada, he visto un pequeño detalle en el calendario que podría mejorar mucho el cierre cuando te agenden llamada. Si quieres te comento."
 
 INSTRUCCIONES CRÍTICAS:
-1. Escribe como esta persona HABLA, no como una persona escribe. Mantén su ritmo y muletillas si caben.
-2. El mensaje aporta valor genuino sobre el punto identificado. NO es un pitch de venta.
-3. NO menciones que eres closer. NO ofrezcas servicios. NO pidas llamada.
-4. Tono: como si fueras un colega del nicho que ha visto algo interesante y quiere compartirlo.
-5. Longitud: 60-120 palabras.
-6. Empieza llamándole por su @handle.
-7. Cierra con una pregunta abierta o una observación que invite a respuesta natural, no con CTA.
+- Escribe en el tono exacto del closer (sus muletillas, su ritmo, sus aperturas).
+- MÁXIMO 40 palabras. Menos es más.
+- NO expliques el insight en el mensaje. Solo insinúalo.
+- PROHIBIDO: adulación de cualquier tipo, preguntas abiertas al final, "te llevo siguiendo".
+- Empieza por el trigger, no por el @handle ni por "Hola".
 
-Devuelve solo el texto del mensaje, sin comillas ni explicaciones.`;
+Devuelve SOLO el texto del mensaje. Sin comillas, sin explicaciones.`;
 
-  const messageText = await claude(systemPrompt, userPrompt, 300);
-  console.log(`  @${qp.handle}: mensaje generado (${messageText.split(' ').length} palabras)`);
+  const messageText = await claude(systemPrompt, userPrompt, 200);
+  if (!messageText || messageText.trim().length < 10) {
+    console.log(`  @${qp.handle}: Claude devolvió mensaje vacío — omitido`);
+    continue;
+  }
+  console.log(`  @${qp.handle}: mensaje generado (${messageText.trim().split(/\s+/).length} palabras)`);
 
   // Crear lead_assignment
   const [assignment] = await sbInsert('lead_assignments', [{

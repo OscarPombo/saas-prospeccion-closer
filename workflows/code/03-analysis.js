@@ -2,9 +2,60 @@
 // Solo procesa prospectos sin análisis o con análisis >7 días.
 // Guarda en prospect_analyses.
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const _https = require('https'), _http = require('http'), _URL = require('url').URL;
+function fetch(url, opts) {
+  opts = opts || {};
+  return new Promise((resolve, reject) => {
+    const u = new _URL(url);
+    const lib = u.protocol === 'https:' ? _https : _http;
+    const body = opts.body ? Buffer.from(opts.body) : null;
+    const headers = { ...(opts.headers || {}) };
+    if (body) headers['Content-Length'] = body.length;
+    const req = lib.request(
+      { hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: u.pathname + u.search, method: opts.method || 'GET', headers },
+      res => {
+        const parts = [];
+        res.on('data', c => parts.push(c));
+        res.on('end', () => {
+          const text = Buffer.concat(parts).toString('utf8');
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: () => Promise.resolve(text), json: () => Promise.resolve(JSON.parse(text)) });
+        });
+        res.on('error', reject);
+      }
+    );
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+const SUPABASE_URL = $env.SUPABASE_URL;
+const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
+const ANTHROPIC_KEY = $env.ANTHROPIC_API_KEY;
+const APIFY_TOKEN = $env.APIFY_TOKEN;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function apifyRunAndWait(actorSlug, input, maxWaitMs = 180000) {
+  const start = await fetch(
+    `https://api.apify.com/v2/acts/${actorSlug}/runs?token=${APIFY_TOKEN}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }
+  );
+  const startData = await start.json();
+  if (!startData?.data?.id) throw new Error('Apify start: ' + JSON.stringify(startData));
+  const runId = startData.data.id;
+  const datasetId = startData.data.defaultDatasetId;
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await sleep(6000);
+    const info = await (await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`)).json();
+    const status = info.data?.status;
+    if (status === 'SUCCEEDED') break;
+    if (status === 'FAILED' || status === 'ABORTED') throw new Error(`Apify run ${status}`);
+  }
+  const items = await (await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}&limit=500`)).json();
+  return Array.isArray(items) ? items : [];
+}
 
 const SB_HEADERS = {
   'Content-Type': 'application/json',
@@ -46,9 +97,26 @@ async function claude(prompt, maxTokens = 1024) {
   if (!r.ok) throw new Error(`Claude: ${await r.text()}`);
   const data = await r.json();
   const raw = data.content[0].text.trim();
-  const match = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-  try { return JSON.parse(match ? match[0] : raw); }
-  catch { return { raw }; }
+  // Strip ALL markdown code fences
+  const noFences = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+  try { return JSON.parse(noFences); } catch {}
+  // Fallback: find first balanced JSON array/object (string-aware bracket tracking)
+  for (let i = 0; i < noFences.length; i++) {
+    if (noFences[i] !== '[' && noFences[i] !== '{') continue;
+    const open = noFences[i], close = open === '[' ? ']' : '}';
+    let depth = 1, j = i + 1, inStr = false, esc = false;
+    while (j < noFences.length && depth > 0) {
+      const c = noFences[j];
+      if (esc) { esc = false; }
+      else if (inStr) { if (c === '\\') esc = true; else if (c === '"') inStr = false; }
+      else if (c === '"') inStr = true;
+      else if (c === '[' || c === '{') depth++;
+      else if (c === ']' || c === '}') depth--;
+      j++;
+    }
+    if (depth === 0) { try { return JSON.parse(noFences.slice(i, j)); } catch {} }
+  }
+  return { raw };
 }
 
 async function fetchLandingText(url) {
@@ -85,6 +153,37 @@ const analyzedIds = new Set(existingAnalyses.map(a => a.prospect_id));
 const toAnalyze = prospects.filter(p => !analyzedIds.has(p.id));
 console.log(`Prospectos a analizar: ${toAnalyze.length}`);
 
+// ── Batch fetch reels (una sola llamada Apify para todos los perfiles) ────────
+const reelsByHandle = {};
+if (toAnalyze.length > 0) {
+  console.log('Scrapeando reels en batch...');
+  try {
+    const urls = [...new Set(toAnalyze.map(p => `https://www.instagram.com/${p.handle}/`))];
+    const posts = await apifyRunAndWait('apify~instagram-scraper', {
+      directUrls: urls,
+      resultsType: 'posts',
+      resultsLimit: 5,
+    });
+    for (const post of posts) {
+      const h = post.ownerUsername;
+      if (!h) continue;
+      if (!reelsByHandle[h]) reelsByHandle[h] = [];
+      if (reelsByHandle[h].length < 5) {
+        reelsByHandle[h].push({
+          caption: (post.caption || '').slice(0, 400),
+          likes: post.likesCount || 0,
+          views: post.videoViewCount || post.videoPlayCount || 0,
+          type: post.type || 'Image',
+          date: post.timestamp ? post.timestamp.split('T')[0] : null,
+        });
+      }
+    }
+    console.log(`Reels obtenidos: ${Object.keys(reelsByHandle).length} perfiles`);
+  } catch (e) {
+    console.log(`Reels batch falló (no bloqueante): ${e.message}`);
+  }
+}
+
 const analyses = [];
 
 for (const p of toAnalyze) {
@@ -106,7 +205,7 @@ Te paso el texto de la landing de un infoproductor. Analiza:
 5. FRICCIONES: máximo 3 cosas que podrían bajar conversión
 6. FORTALEZAS: máximo 2 cosas que están haciendo bien
 
-Devuelve JSON con esos 6 campos.
+Devuelve SOLO el JSON con esos 6 campos, sin texto adicional ni bloques de código markdown. Empieza directamente con {.
 
 Handle: @${p.handle}
 Followers: ${p.followers}
@@ -115,38 +214,66 @@ ${landingText || '[No accesible — analiza solo con los datos del perfil de IG]
 
   const funnelAnalysis = await claude(funnelPrompt, 800);
 
-  // Prompt §8.3 — value_opportunities
+  // Reels del perfil (si disponibles)
+  const reels = reelsByHandle[p.handle] || [];
+  const reelsCaptions = reels.length > 0
+    ? reels.map((r, i) => {
+        const ago = r.date ? Math.floor((Date.now() - new Date(r.date)) / 86400000) + 'd atrás' : '';
+        const engagement = r.views > 0 ? `${(r.views/1000).toFixed(1)}K views` : `${r.likes} likes`;
+        return `Reel ${i+1} (${ago}, ${engagement}): ${r.caption || '(sin caption)'}`;
+      }).join('\n')
+    : 'No disponibles';
+
+  // Prompt §8.3 — value_opportunities (ahora incluye reels)
   const valuePrompt = `Eres consultor de marketing para infoproductos en español. Tu trabajo es identificar
 oportunidades concretas donde alguien podría aportar valor a este infoproductor en un primer contacto.
 
 Tienes:
 - Análisis del embudo: ${JSON.stringify(funnelAnalysis)}
-- Handle: @${p.handle}
-- Followers: ${p.followers}
+- Handle: @${p.handle} | Followers: ${p.followers}
+- REELS RECIENTES (últimos ${reels.length > 0 ? reels.length : 0}):
+${reelsCaptions}
 
-Identifica 2-4 OPORTUNIDADES DE VALOR. Cada una debe:
-- Ser específica (no genérica tipo "mejorar copy")
-- Basarse en algo concreto observado
+Identifica 2-4 OPORTUNIDADES DE VALOR. Prioriza las que se basen en algo concreto y específico observado
+(una frase del reel, una fricción del embudo, un patrón en sus posts). Cada oportunidad debe:
+- Ser específica (citar algo concreto, no "mejorar copy")
+- Basarse en lo que acabas de ver en el material
 - Ser accionable en horas/días
-- NO ser un pitch de "contrátame": es un insight gratis
+- NO ser un pitch de "contrátame": es un insight gratis que demuestra que entiendes su negocio
 
-Devuelve JSON array con objetos: { "area": "Embudo"|"Anuncios"|"Reels"|"Posicionamiento"|"Oferta", "observation": "...", "suggested_value": "..." }`;
+Devuelve SOLO el JSON array, sin texto adicional, sin bloques de código markdown. Empieza con [ y acaba con ].
+Formato: { "area": "Embudo"|"Reels"|"Posicionamiento"|"Oferta"|"Anuncios", "observation": "...", "suggested_value": "..." }`;
 
   const valueOpportunities = await claude(valuePrompt, 800);
 
-  // Clasificación sencilla launch vs evergreen basada en texto del landing
-  const hasLaunchSignals = /masterclass|directo|webinar|reto|día \d|plaza|esta semana/i.test(landingText);
+  // Clasificación launch vs evergreen — combina landing + reels
+  const launchPattern = /masterclass|directo\s+gratis|webinar|reto\s+gratis|día\s+\d|plazas|esta\s+semana|lunes|martes|miércoles|jueves|viernes|\d+\s+de\s+\w+|últimas\s+plazas|abre\s+(matrí|inscri)|cierra\s+(matrí|inscri)/i;
+  const allText = landingText + ' ' + reels.map(r => r.caption).join(' ');
+  const hasLaunchSignals = launchPattern.test(allText);
+
+  // Score: followers + landing + actividad reciente + señal de lanzamiento
+  const lastReelDays = reels[0]?.date
+    ? Math.floor((Date.now() - new Date(reels[0].date)) / 86400000)
+    : 999;
+  const freshnessBonus = lastReelDays <= 3 ? 15 : lastReelDays <= 7 ? 10 : lastReelDays <= 14 ? 5 : 0;
+  const launchBonus = hasLaunchSignals ? 20 : 0;
+  const score = Math.min(100, Math.round(
+    (p.followers / 1000) * 2
+    + (landingText ? 20 : 0)
+    + freshnessBonus
+    + launchBonus
+  ));
 
   analyses.push({
     prospect_id: p.id,
     funnel_summary: JSON.stringify(funnelAnalysis),
     vsl_transcript: null,
     creatives_analysis: null,
-    reels_summary: null,
+    reels_summary: reels.length > 0 ? reels : null,
     value_opportunities: Array.isArray(valueOpportunities) ? valueOpportunities : [valueOpportunities],
     launch_date: null,
     classification: hasLaunchSignals ? 'launch' : 'evergreen',
-    score: Math.min(100, Math.round((p.followers / 1000) * 2 + (landingText ? 20 : 0))),
+    score,
     analyzed_at: new Date().toISOString(),
   });
 
