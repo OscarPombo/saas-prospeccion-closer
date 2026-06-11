@@ -14,6 +14,7 @@ const SUPABASE_URL = $env.SUPABASE_URL;
 const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = $env.ANTHROPIC_API_KEY;
 const APIFY_TOKEN = $env.APIFY_TOKEN;
+const META_ADS_TOKEN = $env.META_ADS_TOKEN || null;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -100,6 +101,39 @@ async function claude(prompt, maxTokens = 1024) {
   return { raw };
 }
 
+async function queryMetaAds(handle) {
+  if (!META_ADS_TOKEN) return [];
+  try {
+    const countries = encodeURIComponent(JSON.stringify(['ES','MX','CO','AR','CL','PE','VE','EC','BO','UY','CR','PA','CU','DO']));
+    const fields = 'ad_creative_bodies,ad_creative_link_titles,page_name';
+    const url = `https://graph.facebook.com/v21.0/ads_archive?search_terms=${encodeURIComponent(handle)}&ad_type=ALL&ad_reached_countries=${countries}&fields=${fields}&limit=10&access_token=${META_ADS_TOKEN}`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const data = await r.json();
+    return (data.data || []).slice(0, 8);
+  } catch { return []; }
+}
+
+async function scrapeApifyTikTok(handle, maxItems = 5) {
+  try {
+    const profileUrl = `https://www.tiktok.com/@${handle}`;
+    const items = await apifyRunAndWait('clockworks/free-tiktok-scraper', {
+      profiles: [profileUrl],
+      resultsPerPage: maxItems,
+    }, 90000);
+    return items.slice(0, maxItems).map(v => ({
+      caption: (v.text || v.description || '').slice(0, 400),
+      likes: v.diggCount || v.likes || 0,
+      views: v.playCount || v.views || 0,
+      type: 'Video',
+      date: v.createTime ? new Date(v.createTime * 1000).toISOString().split('T')[0] : null,
+    }));
+  } catch (e) {
+    console.log(`  TikTok scrape failed for @${handle}: ${e.message}`);
+    return [];
+  }
+}
+
 async function fetchLandingText(url) {
   try {
     const controller = new AbortController();
@@ -175,6 +209,25 @@ for (const p of toAnalyze) {
     console.log(`  @${p.handle}: landing ${landingText ? 'OK' : 'no accesible'} (${landingUrl.slice(0, 60)})`);
   }
 
+  // Meta Ads (requiere META_ADS_TOKEN — opcional, no bloquea)
+  const ads = await queryMetaAds(p.handle);
+  const adsText = ads.length > 0
+    ? ads.map((ad, i) => {
+        const body = (ad.ad_creative_bodies || []).join(' ') || '';
+        const title = (ad.ad_creative_link_titles || []).join(' ') || '';
+        return `Anuncio ${i+1}: ${title ? title + ' — ' : ''}${body}`.slice(0, 300);
+      }).join('\n')
+    : 'No disponibles (sin token Meta Ads o sin anuncios activos)';
+  if (ads.length > 0) console.log(`  @${p.handle}: ${ads.length} anuncios Meta Ads encontrados`);
+
+  // TikTok — busca handle en la bio/landing para intentar scraping
+  const tiktokHandle = p.platform_links?.tiktok || null;
+  let tiktokReels = [];
+  if (tiktokHandle) {
+    tiktokReels = await scrapeApifyTikTok(tiktokHandle);
+    console.log(`  @${p.handle}: ${tiktokReels.length} vídeos TikTok`);
+  }
+
   // Prompt §8.1 — análisis del embudo
   const funnelPrompt = `Eres un experto en embudos de venta de infoproductos en español.
 
@@ -205,15 +258,28 @@ ${landingText || '[No accesible — analiza solo con los datos del perfil de IG]
       }).join('\n')
     : 'No disponibles';
 
-  // Prompt §8.3 — value_opportunities (ahora incluye reels)
+  // Combinar reels IG + TikTok
+  const allReels = [...reels, ...tiktokReels].slice(0, 8);
+  const allReelsCaptions = allReels.length > 0
+    ? allReels.map((r, i) => {
+        const platform = i < reels.length ? 'IG' : 'TT';
+        const ago = r.date ? Math.floor((Date.now() - new Date(r.date)) / 86400000) + 'd atrás' : '';
+        const engagement = r.views > 0 ? `${(r.views/1000).toFixed(1)}K views` : `${r.likes} likes`;
+        return `[${platform}] Reel ${i+1} (${ago}, ${engagement}): ${r.caption || '(sin caption)'}`;
+      }).join('\n')
+    : 'No disponibles';
+
+  // Prompt §8.3 — value_opportunities (incluye reels + ads)
   const valuePrompt = `Eres consultor de marketing para infoproductos en español. Tu trabajo es identificar
 oportunidades concretas donde alguien podría aportar valor a este infoproductor en un primer contacto.
 
 Tienes:
 - Análisis del embudo: ${JSON.stringify(funnelAnalysis)}
 - Handle: @${p.handle} | Followers: ${p.followers}
-- REELS RECIENTES (últimos ${reels.length > 0 ? reels.length : 0}):
-${reelsCaptions}
+- REELS RECIENTES IG+TikTok (${allReels.length}):
+${allReelsCaptions}
+- ANUNCIOS ACTIVOS META (${ads.length}):
+${adsText}
 
 Identifica 2-4 OPORTUNIDADES DE VALOR. Prioriza las que se basen en algo concreto y específico observado
 (una frase del reel, una fricción del embudo, un patrón en sus posts). Cada oportunidad debe:
@@ -229,28 +295,30 @@ Formato: { "area": "Embudo"|"Reels"|"Posicionamiento"|"Oferta"|"Anuncios", "obse
 
   // Clasificación launch vs evergreen — combina landing + reels
   const launchPattern = /masterclass|directo\s+gratis|webinar|reto\s+gratis|día\s+\d|plazas|esta\s+semana|lunes|martes|miércoles|jueves|viernes|\d+\s+de\s+\w+|últimas\s+plazas|abre\s+(matrí|inscri)|cierra\s+(matrí|inscri)/i;
-  const allText = landingText + ' ' + reels.map(r => r.caption).join(' ');
+  const allText = landingText + ' ' + allReels.map(r => r.caption).join(' ') + ' ' + adsText;
   const hasLaunchSignals = launchPattern.test(allText);
 
-  // Score: followers + landing + actividad reciente + señal de lanzamiento
-  const lastReelDays = reels[0]?.date
-    ? Math.floor((Date.now() - new Date(reels[0].date)) / 86400000)
+  // Score: followers + landing + actividad reciente + señal de lanzamiento + anuncios
+  const lastReelDays = allReels[0]?.date
+    ? Math.floor((Date.now() - new Date(allReels[0].date)) / 86400000)
     : 999;
   const freshnessBonus = lastReelDays <= 3 ? 15 : lastReelDays <= 7 ? 10 : lastReelDays <= 14 ? 5 : 0;
   const launchBonus = hasLaunchSignals ? 20 : 0;
+  const adsBonus = ads.length >= 3 ? 15 : ads.length >= 1 ? 8 : 0;
   const score = Math.min(100, Math.round(
     (p.followers / 1000) * 2
     + (landingText ? 20 : 0)
     + freshnessBonus
     + launchBonus
+    + adsBonus
   ));
 
   analyses.push({
     prospect_id: p.id,
     funnel_summary: JSON.stringify(funnelAnalysis),
     vsl_transcript: null,
-    creatives_analysis: null,
-    reels_summary: reels.length > 0 ? reels : null,
+    creatives_analysis: ads.length > 0 ? ads : null,
+    reels_summary: allReels.length > 0 ? allReels : null,
     value_opportunities: Array.isArray(valueOpportunities) ? valueOpportunities : [valueOpportunities],
     launch_date: null,
     classification: hasLaunchSignals ? 'launch' : 'evergreen',

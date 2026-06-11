@@ -36,6 +36,36 @@ async function sbInsert(table, rows) {
   return r.json();
 }
 
+function detectRegion(profile) {
+  const text = [
+    profile.biography || '',
+    profile.externalUrl || '',
+    profile.location || '',
+    profile.city || '',
+    profile.country || '',
+  ].join(' ').toLowerCase();
+
+  const spainSigns = [
+    'españa', 'spain', 'madrid', 'barcelona', 'valencia', 'sevilla', 'bilbao',
+    'zaragoza', 'málaga', 'alicante', 'murcia', 'galicia', 'asturias', 'canarias',
+    '.es/', '+34', '🇪🇸',
+  ];
+  const latamSigns = [
+    'mexico', 'méxico', 'colombia', 'argentina', 'peru', 'perú', 'chile',
+    'venezuela', 'ecuador', 'bolivia', 'uruguay', 'paraguay', 'costa rica',
+    'bogotá', 'medellín', 'cali', 'buenos aires', 'lima', 'santiago',
+    'monterrey', 'guadalajara', 'cdmx', 'caracas', 'guayaquil', 'quito',
+    '.mx/', '.co/', '.ar/', '.pe/', '.cl/', '.ve/', '.ec/', '.bo/', '.uy/',
+    '+52', '+54', '+57', '+51', '+56', '+58', '🇲🇽', '🇨🇴', '🇦🇷', '🇵🇪', '🇨🇱',
+  ];
+
+  const spainCount = spainSigns.filter(s => text.includes(s)).length;
+  const latamCount = latamSigns.filter(s => text.includes(s)).length;
+  if (spainCount > 0 && spainCount >= latamCount) return 'spain';
+  if (latamCount > 0) return 'latam';
+  return 'unknown';
+}
+
 // Rechazar bios claramente en otro idioma (estrategia permisiva: solo bloquear lo obvio)
 const NON_ES_HINTS = [
   // Inglés
@@ -88,6 +118,7 @@ for (const rp of rawProspects) {
     platform_links: {
       instagram: `https://www.instagram.com/${rp.handle}/`,
       landing: p.externalUrl,
+      region: detectRegion(p),
     },
     followers,
     ads_count: 0,      // Se completará en sprint 2 con Meta Ads

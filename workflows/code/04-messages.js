@@ -73,6 +73,7 @@ if (!closer) throw new Error('Closer no encontrado: ' + CLOSER_EMAIL);
 const tp = closer.tone_profile;
 const ss = tp?.style_summary || {};
 const transcripts = tp?.transcripts || [];
+const regionPref = tp?.region_preference || 'both'; // 'spain' | 'latam' | 'both'
 
 // ── Candidatos: prospectos con análisis, sin asignación hoy ──────────────────
 const todayStart = new Date();
@@ -94,11 +95,15 @@ const alreadyAssigned = new Set(todayAssignments.map(a => a.prospect_id));
 const seenHandles = new Set();
 const dedupedCandidates = [];
 for (const a of analyses) {
-  const [qp] = await sbGet(`qualified_prospects?id=eq.${a.prospect_id}&select=handle`);
-  if (qp && !seenHandles.has(qp.handle) && !alreadyAssigned.has(a.prospect_id)) {
-    seenHandles.add(qp.handle);
-    dedupedCandidates.push(a);
+  const [qp] = await sbGet(`qualified_prospects?id=eq.${a.prospect_id}&select=handle,platform_links`);
+  if (!qp || seenHandles.has(qp.handle) || alreadyAssigned.has(a.prospect_id)) continue;
+  // Filtro de región
+  if (regionPref !== 'both') {
+    const prospectRegion = qp.platform_links?.region || 'unknown';
+    if (prospectRegion !== 'unknown' && prospectRegion !== regionPref) continue;
   }
+  seenHandles.add(qp.handle);
+  dedupedCandidates.push(a);
 }
 const candidates = dedupedCandidates;
 const top = candidates.slice(0, 5);
