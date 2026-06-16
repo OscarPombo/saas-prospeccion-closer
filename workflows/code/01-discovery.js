@@ -54,17 +54,15 @@ async function supabaseUpsert(table, rows) {
   return res.json();
 }
 
-// ── Hashtags para nicho ia-negocios ──────────────────────────────────────────
-// Mix de hashtags grandes (infoproductores establecidos los usan) + específicos de IA
+// ── Hashtags para nicho ia-negocios — España prioritario (modo ahorro junio) ──
+// Reducido a 5 hashtags Spain-focused + límite de posts y perfiles recortado
+// En julio ampliar de nuevo cuando Apify tenga cuota llena
 const HASHTAGS = [
-  // Específicos IA en español
-  'ianegocios', 'cursosdeia', 'iaparaemprendedores',
-  'chatgptnegocios', 'automatizacionempresarial',
-  // Infoproducción general (más cuentas establecidas)
-  'infoproductor', 'negociosonline', 'cursosonline',
-  'mentoriaonline', 'marketingdigital',
-  // IA amplio (incluye cuentas grandes)
-  'inteligenciaartificial',
+  'ianegocios',
+  'infoproductor',
+  'negociosonline',
+  'marketingdigital',
+  'cursosdeia',
 ];
 const directUrls = HASHTAGS.map(h => `https://www.instagram.com/explore/tags/${h}/`);
 
@@ -73,14 +71,14 @@ console.log('Discovery: arrancando hashtag scraper en', HASHTAGS.join(', '));
 const posts = await apifyRunAndWait('apify~instagram-scraper', {
   directUrls,
   resultsType: 'posts',
-  resultsLimit: 100,
+  resultsLimit: 40,
 });
 
 // Step 2: usernames únicos de las últimas 72h
 const cutoff = Date.now() - 72 * 3600 * 1000;
 const recentPosts = posts.filter(p => p.timestamp && new Date(p.timestamp).getTime() > cutoff);
 const usernameSet = new Set(recentPosts.map(p => p.ownerUsername).filter(Boolean));
-const usernames = [...usernameSet].slice(0, 50);
+const usernames = [...usernameSet].slice(0, 20);
 console.log(`Posts recientes: ${recentPosts.length} — Usernames únicos: ${usernames.length}`);
 
 if (!usernames.length) return [{ json: { discovered: 0, note: 'sin usernames' } }];

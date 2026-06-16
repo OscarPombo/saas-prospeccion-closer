@@ -1,5 +1,5 @@
-// Stage 4: Matching + generación de mensajes con Claude (§8.4)
-// Selecciona top 5 prospectos para el founder, genera un mensaje por cada uno.
+// Stage 4: Matching + generación de mensajes con Claude
+// Itera sobre todos los closers activos. Cada uno recibe sus propios candidatos.
 
 const axios = require('axios');
 async function fetch(url, opts) {
@@ -12,7 +12,6 @@ async function fetch(url, opts) {
 const SUPABASE_URL = $env.SUPABASE_URL;
 const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = $env.ANTHROPIC_API_KEY;
-const CLOSER_EMAIL = 'opombo84@gmail.com';
 
 const SB_HEADERS = {
   'Content-Type': 'application/json',
@@ -37,15 +36,6 @@ async function sbInsert(table, rows) {
   return r.json();
 }
 
-async function sbPatch(table, id, data) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(`sbPatch ${table}: ${await r.text()}`);
-}
-
 async function claude(system, user, maxTokens = 400) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -66,53 +56,56 @@ async function claude(system, user, maxTokens = 400) {
   return data.content[0].text.trim();
 }
 
-// ── Obtener closer (founder) ──────────────────────────────────────────────────
-const [closer] = await sbGet(`closers?email=eq.${CLOSER_EMAIL}&select=id,tone_profile,selected_niches`);
-if (!closer) throw new Error('Closer no encontrado: ' + CLOSER_EMAIL);
+// ── Todos los closers activos ─────────────────────────────────────────────────
+const closers = await sbGet(`closers?status=eq.active&select=id,email,tone_profile,selected_niches`);
+console.log(`Closers activos: ${closers.length}`);
+if (!closers.length) return [{ json: { messages: 0, note: 'sin closers activos' } }];
 
-const tp = closer.tone_profile;
-const ss = tp?.style_summary || {};
-const transcripts = tp?.transcripts || [];
-const regionPref = tp?.region_preference || 'both'; // 'spain' | 'latam' | 'both'
-
-// ── Candidatos: prospectos con análisis, sin asignación hoy ──────────────────
-const todayStart = new Date();
-todayStart.setHours(0, 0, 0, 0);
-
+// ── Pool de análisis compartido (se consulta una vez para todos) ──────────────
 const analyses = await sbGet(
   `prospect_analyses?select=id,prospect_id,value_opportunities,classification,score,funnel_summary`
   + `&score=gte.0&order=score.desc&limit=30`
 );
 
-// Prospectos ya asignados en los últimos 30 días a este closer
+const now = new Date();
+const expires = new Date(now.getTime() + 24 * 3600 * 1000);
 const cutoff30d = new Date(Date.now() - 30 * 86400000).toISOString();
-const todayAssignments = await sbGet(
-  `lead_assignments?closer_id=eq.${closer.id}&assigned_at=gte.${cutoff30d}&select=prospect_id`
-);
-const alreadyAssigned = new Set(todayAssignments.map(a => a.prospect_id));
 
-// Deduplicar por handle (puede haber varias entradas del mismo infoproductor)
-const seenHandles = new Set();
-const dedupedCandidates = [];
-for (const a of analyses) {
-  const [qp] = await sbGet(`qualified_prospects?id=eq.${a.prospect_id}&select=handle,platform_links`);
-  if (!qp || seenHandles.has(qp.handle) || alreadyAssigned.has(a.prospect_id)) continue;
-  // Filtro de región
-  if (regionPref !== 'both') {
-    const prospectRegion = qp.platform_links?.region || 'unknown';
-    if (prospectRegion !== 'unknown' && prospectRegion !== regionPref) continue;
+let totalMessages = 0;
+const allPreviews = [];
+
+for (const closer of closers) {
+  const tp = closer.tone_profile || {};
+  const ss = tp.style_summary || {};
+  const transcripts = tp.transcripts || [];
+  const regionPref = tp.region_preference || 'both';
+
+  // Prospectos ya asignados a este closer en los últimos 30 días
+  const assigned = await sbGet(
+    `lead_assignments?closer_id=eq.${closer.id}&assigned_at=gte.${cutoff30d}&select=prospect_id`
+  );
+  const alreadyAssigned = new Set(assigned.map(a => a.prospect_id));
+
+  // Candidatos válidos para este closer (dedup por handle + región + cooldown)
+  const seenHandles = new Set();
+  const candidates = [];
+  for (const a of analyses) {
+    const [qp] = await sbGet(`qualified_prospects?id=eq.${a.prospect_id}&select=handle,platform_links`);
+    if (!qp || seenHandles.has(qp.handle) || alreadyAssigned.has(a.prospect_id)) continue;
+    if (regionPref !== 'both') {
+      const prospectRegion = qp.platform_links?.region || 'unknown';
+      if (prospectRegion !== 'unknown' && prospectRegion !== regionPref) continue;
+    }
+    seenHandles.add(qp.handle);
+    candidates.push(a);
   }
-  seenHandles.add(qp.handle);
-  dedupedCandidates.push(a);
-}
-const candidates = dedupedCandidates;
-const top = candidates.slice(0, 5);
-console.log(`Candidatos: ${candidates.length} — Seleccionados: ${top.length}`);
 
-if (!top.length) return [{ json: { messages: 0, note: 'sin candidatos nuevos' } }];
+  const top = candidates.slice(0, 5);
+  console.log(`[${closer.email}] Candidatos: ${candidates.length} → seleccionados: ${top.length}`);
+  if (!top.length) continue;
 
-// ── System prompt de tono del closer ─────────────────────────────────────────
-const systemPrompt = `Eres este closer escribiendo un mensaje de Instagram a un infoproductor.
+  // System prompt con el tono de este closer
+  const systemPrompt = `Eres este closer escribiendo un mensaje de Instagram a un infoproductor.
 
 PERFIL DEL CLOSER (cómo habla):
 Variante de español: ${ss.spanish_variant || 'Español peninsular'}
@@ -126,31 +119,20 @@ Formalidad: ${ss.formality_level || 2}/5
 EJEMPLOS DE CÓMO HABLA ESTE CLOSER:
 ${transcripts.slice(0, 3).map(t => t.text?.slice(0, 400)).join('\n---\n')}`;
 
-// ── Generar mensajes ──────────────────────────────────────────────────────────
-const messages = [];
-const now = new Date();
-const expires = new Date(now.getTime() + 24 * 3600 * 1000);
+  for (const analysis of top) {
+    const [qp] = await sbGet(`qualified_prospects?id=eq.${analysis.prospect_id}&select=handle,platform_links,followers`);
+    if (!qp) continue;
 
-for (const analysis of top) {
-  // Obtener datos del prospecto
-  const [qp] = await sbGet(`qualified_prospects?id=eq.${analysis.prospect_id}&select=handle,platform_links,followers`);
-  if (!qp) continue;
+    const opportunities = Array.isArray(analysis.value_opportunities) ? analysis.value_opportunities : [];
+    const vo = opportunities.find(o => o && typeof o.observation === 'string' && o.observation.trim());
+    if (!vo) {
+      console.log(`  @${qp?.handle || '?'}: sin oportunidades válidas — omitido`);
+      continue;
+    }
 
-  const opportunities = Array.isArray(analysis.value_opportunities)
-    ? analysis.value_opportunities
-    : [];
+    const sourceLabel = vo.area === 'Reels' ? 'reel' : vo.area === 'Embudo' ? 'landing' : vo.area?.toLowerCase() || 'perfil';
 
-  // Buscar la primera oportunidad con observación válida (JSON bien formado)
-  const vo = opportunities.find(o => o && typeof o.observation === 'string' && o.observation.trim());
-  if (!vo) {
-    console.log(`  @${qp?.handle || '?'}: sin oportunidades válidas — omitido`);
-    continue;
-  }
-
-  // Donde se observó: landing, reel, linktree, etc.
-  const sourceLabel = vo.area === 'Reels' ? 'reel' : vo.area === 'Embudo' ? 'landing' : vo.area?.toLowerCase() || 'perfil';
-
-  const userPrompt = `INFOPRODUCTOR: @${qp.handle}
+    const userPrompt = `INFOPRODUCTOR: @${qp.handle}
 
 LO QUE HAS OBSERVADO (no lo reveles del todo — úsalo para crear curiosidad):
 Área: ${vo.area} (${sourceLabel})
@@ -175,32 +157,34 @@ INSTRUCCIONES CRÍTICAS:
 
 Devuelve SOLO el texto del mensaje. Sin comillas, sin explicaciones.`;
 
-  const messageText = await claude(systemPrompt, userPrompt, 200);
-  if (!messageText || messageText.trim().length < 10) {
-    console.log(`  @${qp.handle}: Claude devolvió mensaje vacío — omitido`);
-    continue;
-  }
-  console.log(`  @${qp.handle}: mensaje generado (${messageText.trim().split(/\s+/).length} palabras)`);
+    const messageText = await claude(systemPrompt, userPrompt, 200);
+    if (!messageText || messageText.trim().length < 10) {
+      console.log(`  @${qp.handle}: Claude devolvió mensaje vacío — omitido`);
+      continue;
+    }
+    console.log(`  @${qp.handle}: mensaje generado (${messageText.trim().split(/\s+/).length} palabras)`);
 
-  // Crear lead_assignment
-  const [assignment] = await sbInsert('lead_assignments', [{
-    prospect_id: analysis.prospect_id,
-    closer_id: closer.id,
-    assigned_at: now.toISOString(),
-    expires_at: expires.toISOString(),
-    status: 'pending',
-  }]);
-
-  // Guardar mensaje generado
-  if (assignment?.id) {
-    await sbInsert('generated_messages', [{
-      assignment_id: assignment.id,
-      message_text: messageText,
-      value_point: vo.observation,
+    const [assignment] = await sbInsert('lead_assignments', [{
+      prospect_id: analysis.prospect_id,
+      closer_id: closer.id,
+      assigned_at: now.toISOString(),
+      expires_at: expires.toISOString(),
+      status: 'pending',
     }]);
-    messages.push({ handle: qp.handle, message: messageText.slice(0, 80) + '...' });
+
+    if (assignment?.id) {
+      await sbInsert('generated_messages', [{
+        assignment_id: assignment.id,
+        message_text: messageText,
+        value_point: vo.observation,
+      }]);
+      allPreviews.push({ closer: closer.email, handle: qp.handle, message: messageText.slice(0, 80) + '...' });
+      totalMessages++;
+    }
   }
+
+  console.log(`[${closer.email}] Mensajes generados: ${top.length}`);
 }
 
-console.log(`Mensajes generados: ${messages.length}`);
-return [{ json: { messages: messages.length, preview: messages } }];
+console.log(`Total mensajes generados: ${totalMessages}`);
+return [{ json: { messages: totalMessages, preview: allPreviews } }];

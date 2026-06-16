@@ -156,9 +156,10 @@ async function fetchLandingText(url) {
 }
 
 // Prospectos calificados sin análisis o con análisis >7 días
+// Límite 5 por ejecución para no superar el timeout del Code node (300s)
 const cutoff7d = new Date(Date.now() - 7 * 86400000).toISOString();
 const prospects = await sbGet(
-  `qualified_prospects?select=id,handle,platform_links,followers&order=qualified_at.desc&limit=20`
+  `qualified_prospects?select=id,handle,platform_links,followers&order=qualified_at.desc&limit=5`
 );
 const existingAnalyses = await sbGet(
   `prospect_analyses?analyzed_at=gte.${cutoff7d}&select=prospect_id`
@@ -178,7 +179,7 @@ if (toAnalyze.length > 0) {
       directUrls: urls,
       resultsType: 'posts',
       resultsLimit: 5,
-    });
+    }, 90000); // 90s max — suficiente para ≤5 perfiles
     for (const post of posts) {
       const h = post.ownerUsername;
       if (!h) continue;
