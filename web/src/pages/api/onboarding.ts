@@ -65,13 +65,13 @@ Devuelve SOLO el JSON, sin texto adicional:
     } catch { /* usa el fallback */ }
 
     // 3. Crear closer en Supabase
-    const sbRes = await fetch(`${import.meta.env.SUPABASE_URL}/rest/v1/closers`, {
+    const sbRes = await fetch(`${import.meta.env.SUPABASE_URL}/rest/v1/closers?on_conflict=email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`,
         'apikey': import.meta.env.SUPABASE_SERVICE_KEY,
-        'Prefer': 'return=minimal,resolution=ignore-duplicates',
+        'Prefer': 'return=minimal,resolution=merge-duplicates',
       },
       body: JSON.stringify({
         email,
