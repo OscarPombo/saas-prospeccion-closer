@@ -40,8 +40,8 @@ import Layout from '../../layouts/Layout.astro';
         </div>
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Nichos de infoproductores</label>
-          <p class="text-xs text-gray-400">Selecciona uno o varios. Los activos tienen prospección en marcha.</p>
-          <div id="niches-container" class="space-y-3 max-h-64 overflow-y-auto pr-1"></div>
+          <p class="text-xs text-gray-400">Selecciona hasta 5 nichos. <span id="niche-count" class="font-medium text-indigo-600">1 seleccionado</span></p>
+          <div id="niches-container" class="space-y-3 max-h-72 overflow-y-auto pr-1"></div>
         </div>
         <button id="next1" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors">
           Siguiente →
@@ -102,71 +102,71 @@ import Layout from '../../layouts/Layout.astro';
   const NICHES: { category: string; items: { slug: string; name: string; active: boolean }[] }[] = [
     { category: '🤖 IA', items: [
       { slug: 'ia-negocios',       name: 'IA aplicada a negocios',            active: true },
-      { slug: 'automatizaciones',  name: 'Automatizaciones (n8n, Make…)',      active: false },
-      { slug: 'prompt-engineering',name: 'Prompt engineering / diseño con IA', active: false },
-      { slug: 'agencias-ia',       name: 'Agencias de IA / agentes',           active: false },
+      { slug: 'automatizaciones',  name: 'Automatizaciones (n8n, Make…)',      active: true },
+      { slug: 'prompt-engineering',name: 'Prompt engineering / diseño con IA', active: true },
+      { slug: 'agencias-ia',       name: 'Agencias de IA / agentes',           active: true },
     ]},
     { category: '💼 Negocios', items: [
-      { slug: 'agencias-marketing',      name: 'Agencias de marketing digital',    active: false },
-      { slug: 'ecommerce-dropshipping',  name: 'Ecommerce y dropshipping',         active: false },
-      { slug: 'amazon-fba',              name: 'Amazon FBA / private label',       active: false },
-      { slug: 'consultoria-b2b',         name: 'Consultoría high-ticket B2B',      active: false },
-      { slug: 'formacion-closers',       name: 'Formación para closers',           active: false },
-      { slug: 'lanzamientos-plf',        name: 'Lanzamientos digitales (PLF)',     active: false },
-      { slug: 'micro-saas',              name: 'Micro-SaaS / indie hackers',       active: false },
-      { slug: 'servicios-productizados', name: 'Servicios productizados',          active: false },
-      { slug: 'compra-venta-negocios',   name: 'Compra-venta negocios online',     active: false },
-      { slug: 'lifestyle-business',      name: 'Lifestyle business',               active: false },
+      { slug: 'agencias-marketing',      name: 'Agencias de marketing digital',    active: true },
+      { slug: 'ecommerce-dropshipping',  name: 'Ecommerce y dropshipping',         active: true },
+      { slug: 'amazon-fba',              name: 'Amazon FBA / private label',       active: true },
+      { slug: 'consultoria-b2b',         name: 'Consultoría high-ticket B2B',      active: true },
+      { slug: 'formacion-closers',       name: 'Formación para closers',           active: true },
+      { slug: 'lanzamientos-plf',        name: 'Lanzamientos digitales (PLF)',     active: true },
+      { slug: 'micro-saas',              name: 'Micro-SaaS / indie hackers',       active: true },
+      { slug: 'servicios-productizados', name: 'Servicios productizados',          active: true },
+      { slug: 'compra-venta-negocios',   name: 'Compra-venta negocios online',     active: true },
+      { slug: 'lifestyle-business',      name: 'Lifestyle business',               active: true },
     ]},
     { category: '📱 Marketing', items: [
-      { slug: 'copywriting',         name: 'Copywriting de respuesta directa', active: false },
-      { slug: 'meta-ads',            name: 'Meta Ads / publicidad pagada',     active: false },
-      { slug: 'email-newsletters',   name: 'Email marketing y newsletters',    active: false },
-      { slug: 'growth-organico',     name: 'TikTok / Instagram growth',        active: false },
-      { slug: 'funnels',             name: 'Embudos de venta',                 active: false },
-      { slug: 'ugc-creator',         name: 'UGC creator',                      active: false },
-      { slug: 'youtube-monetizacion',name: 'YouTube monetización',             active: false },
-      { slug: 'seo-ia',              name: 'SEO con IA / contenido',           active: false },
+      { slug: 'copywriting',         name: 'Copywriting de respuesta directa', active: true },
+      { slug: 'meta-ads',            name: 'Meta Ads / publicidad pagada',     active: true },
+      { slug: 'email-newsletters',   name: 'Email marketing y newsletters',    active: true },
+      { slug: 'growth-organico',     name: 'TikTok / Instagram growth',        active: true },
+      { slug: 'funnels',             name: 'Embudos de venta',                 active: true },
+      { slug: 'ugc-creator',         name: 'UGC creator',                      active: true },
+      { slug: 'youtube-monetizacion',name: 'YouTube monetización',             active: true },
+      { slug: 'seo-ia',              name: 'SEO con IA / contenido',           active: true },
     ]},
     { category: '💰 Finanzas', items: [
-      { slug: 'trading',                   name: 'Trading (forex, índices)',        active: false },
-      { slug: 'inmobiliaria',              name: 'Inversión inmobiliaria',          active: false },
-      { slug: 'crypto-web3',               name: 'Crypto y Web3',                  active: false },
-      { slug: 'libertad-financiera',       name: 'Educación financiera',           active: false },
-      { slug: 'bolsa-value',               name: 'Bolsa / value investing',        active: false },
-      { slug: 'real-estate-internacional', name: 'Real estate internacional',      active: false },
-      { slug: 'inversion-angel',           name: 'Inversión ángel',                active: false },
+      { slug: 'trading',                   name: 'Trading (forex, índices)',        active: true },
+      { slug: 'inmobiliaria',              name: 'Inversión inmobiliaria',          active: true },
+      { slug: 'crypto-web3',               name: 'Crypto y Web3',                  active: true },
+      { slug: 'libertad-financiera',       name: 'Educación financiera',           active: true },
+      { slug: 'bolsa-value',               name: 'Bolsa / value investing',        active: true },
+      { slug: 'real-estate-internacional', name: 'Real estate internacional',      active: true },
+      { slug: 'inversion-angel',           name: 'Inversión ángel',                active: true },
     ]},
     { category: '🧠 Desarrollo', items: [
-      { slug: 'alto-rendimiento',       name: 'Coaching alto rendimiento',      active: false },
-      { slug: 'mindset-abundancia',     name: 'Mentalidad y abundancia',        active: false },
-      { slug: 'liderazgo',              name: 'Liderazgo y equipos',            active: false },
-      { slug: 'productividad',          name: 'Productividad',                  active: false },
-      { slug: 'public-speaking',        name: 'Public speaking y oratoria',     active: false },
-      { slug: 'inteligencia-emocional', name: 'Inteligencia emocional',         active: false },
+      { slug: 'alto-rendimiento',       name: 'Coaching alto rendimiento',      active: true },
+      { slug: 'mindset-abundancia',     name: 'Mentalidad y abundancia',        active: true },
+      { slug: 'liderazgo',              name: 'Liderazgo y equipos',            active: true },
+      { slug: 'productividad',          name: 'Productividad',                  active: true },
+      { slug: 'public-speaking',        name: 'Public speaking y oratoria',     active: true },
+      { slug: 'inteligencia-emocional', name: 'Inteligencia emocional',         active: true },
     ]},
     { category: '💪 Salud', items: [
-      { slug: 'perdida-peso',        name: 'Pérdida de peso premium',     active: false },
-      { slug: 'hipertrofia',         name: 'Hipertrofia y culturismo',    active: false },
-      { slug: 'biohacking-hormonal', name: 'Salud hormonal y biohacking', active: false },
-      { slug: 'salud-mental',        name: 'Salud mental y burnout',      active: false },
-      { slug: 'longevidad',          name: 'Longevidad y antiaging',      active: false },
+      { slug: 'perdida-peso',        name: 'Pérdida de peso premium',     active: true },
+      { slug: 'hipertrofia',         name: 'Hipertrofia y culturismo',    active: true },
+      { slug: 'biohacking-hormonal', name: 'Salud hormonal y biohacking', active: true },
+      { slug: 'salud-mental',        name: 'Salud mental y burnout',      active: true },
+      { slug: 'longevidad',          name: 'Longevidad y antiaging',      active: true },
     ]},
     { category: '❤️ Relaciones', items: [
-      { slug: 'seduccion-masculina', name: 'Seducción masculina',                active: false },
-      { slug: 'coaching-mujeres',    name: 'Coaching femenino (relaciones)',     active: false },
-      { slug: 'terapia-pareja',      name: 'Terapia de pareja y sexualidad',     active: false },
+      { slug: 'seduccion-masculina', name: 'Seducción masculina',                active: true },
+      { slug: 'coaching-mujeres',    name: 'Coaching femenino (relaciones)',     active: true },
+      { slug: 'terapia-pareja',      name: 'Terapia de pareja y sexualidad',     active: true },
     ]},
     { category: '✨ Espiritualidad', items: [
-      { slug: 'coaching-transformacional', name: 'Coaching transformacional',   active: false },
-      { slug: 'mentoria-femenina',         name: 'Mentoría espiritual femenina', active: false },
-      { slug: 'astrologia-pro',            name: 'Astrología profesional',       active: false },
+      { slug: 'coaching-transformacional', name: 'Coaching transformacional',   active: true },
+      { slug: 'mentoria-femenina',         name: 'Mentoría espiritual femenina', active: true },
+      { slug: 'astrologia-pro',            name: 'Astrología profesional',       active: true },
     ]},
     { category: '🎯 Skills', items: [
-      { slug: 'mentoria-inmobiliaria',      name: 'Mentoría para agentes inmobiliarios', active: false },
-      { slug: 'coaches-cobrar-mas',         name: 'Coaches que quieren cobrar más',      active: false },
-      { slug: 'musica-produccion',          name: 'Música y producción musical',         active: false },
-      { slug: 'coaching-ejecutivo-c-level', name: 'Coaching ejecutivo C-level',          active: false },
+      { slug: 'mentoria-inmobiliaria',      name: 'Mentoría para agentes inmobiliarios', active: true },
+      { slug: 'coaches-cobrar-mas',         name: 'Coaches que quieren cobrar más',      active: true },
+      { slug: 'musica-produccion',          name: 'Música y producción musical',         active: true },
+      { slug: 'coaching-ejecutivo-c-level', name: 'Coaching ejecutivo C-level',          active: true },
     ]},
   ];
 
@@ -227,7 +227,10 @@ import Layout from '../../layouts/Layout.astro';
     });
   });
 
-  // Nichos (multi-select) — delegación en el contenedor para botones generados dinámicamente
+  function updateNicheCount() {
+    document.getElementById('niche-count')!.textContent = `${selectedNiches.length} seleccionado${selectedNiches.length !== 1 ? 's' : ''}`;
+  }
+
   document.getElementById('niches-container')!.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.niche-btn') as HTMLButtonElement | null;
     if (!btn || btn.disabled) return;
@@ -237,9 +240,11 @@ import Layout from '../../layouts/Layout.astro';
       selectedNiches = selectedNiches.filter(n => n !== niche);
       btn.className = 'niche-btn py-2 px-2.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 text-left transition-colors hover:border-gray-300';
     } else {
+      if (selectedNiches.length >= 5) { showError('Máximo 5 nichos.'); return; }
       selectedNiches.push(niche);
       btn.className = 'niche-btn py-2 px-2.5 rounded-lg border border-indigo-600 bg-indigo-50 text-xs font-medium text-indigo-700 text-left transition-colors';
     }
+    updateNicheCount();
   });
 
   // Paso 1 → 2
