@@ -40,7 +40,7 @@ import Layout from '../../layouts/Layout.astro';
         </div>
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Nichos de infoproductores</label>
-          <p class="text-xs text-gray-400">Selecciona hasta 5 nichos. <span id="niche-count" class="font-medium text-indigo-600">1 seleccionado</span></p>
+          <p class="text-xs text-gray-400">Selecciona hasta 5 nichos. <span id="niche-count" class="font-medium text-indigo-600">0 seleccionados</span></p>
           <div id="niches-container" class="space-y-3 max-h-72 overflow-y-auto pr-1"></div>
         </div>
         <button id="next1" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors">
@@ -95,7 +95,7 @@ import Layout from '../../layouts/Layout.astro';
 <script>
   let currentStep = 1;
   let selectedRegion = 'both';
-  let selectedNiches: string[] = ['ia-negocios'];
+  let selectedNiches: string[] = [];
   let audioFile: File | null = null;
 
   const regionLabels: Record<string, string> = { spain: '🇪🇸 España', latam: '🌎 LATAM', both: '🌍 Ambas' };
@@ -236,7 +236,7 @@ import Layout from '../../layouts/Layout.astro';
     if (!btn || btn.disabled) return;
     const niche = btn.dataset.niche!;
     if (selectedNiches.includes(niche)) {
-      if (selectedNiches.length === 1) return;
+      if (selectedNiches.length === 0) return;
       selectedNiches = selectedNiches.filter(n => n !== niche);
       btn.className = 'niche-btn py-2 px-2.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 text-left transition-colors hover:border-gray-300';
     } else {
@@ -253,6 +253,7 @@ import Layout from '../../layouts/Layout.astro';
     const email = (document.getElementById('email') as HTMLInputElement).value.trim();
     const telegram = (document.getElementById('telegram') as HTMLInputElement).value.trim();
     if (!name || !email || !telegram) { showError('Rellena todos los campos.'); return; }
+    if (selectedNiches.length === 0) { showError('Selecciona al menos un nicho.'); return; }
     showStep(2);
   });
 
