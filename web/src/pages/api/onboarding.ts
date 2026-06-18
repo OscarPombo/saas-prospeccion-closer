@@ -8,6 +8,8 @@ export const POST: APIRoute = async ({ request }) => {
     const email = formData.get('email') as string;
     const telegram = formData.get('telegram') as string;
     const region = formData.get('region') as string;
+    const nichesRaw = formData.get('niches') as string;
+    const niches: string[] = nichesRaw ? JSON.parse(nichesRaw) : ['ia-negocios'];
     const audioFile = formData.get('audio') as File;
 
     if (!name || !email || !telegram || !audioFile) {
@@ -84,7 +86,7 @@ Devuelve SOLO el JSON, sin texto adicional:
         status: 'active',
         timezone: 'Europe/Madrid',
         mode: 'both',
-        selected_niches: [],
+        selected_niches: niches,
       }),
     });
 

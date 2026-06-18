@@ -38,6 +38,16 @@ import Layout from '../../layouts/Layout.astro';
             <button type="button" data-region="both" class="region-btn py-2 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 transition-colors">🌍 Ambas</button>
           </div>
         </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">Nichos de infoproductores</label>
+          <p class="text-xs text-gray-400">Selecciona uno o varios. Puedes cambiarlos después.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-niche="ia-negocios" class="niche-btn selected py-2.5 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 text-left transition-colors">🤖 IA & Negocios</button>
+            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">📱 Marketing Digital<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
+            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">🧠 Coaching & Mentoría<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
+            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">💰 Finanzas<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
+          </div>
+        </div>
         <button id="next1" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors">
           Siguiente →
         </button>
@@ -90,9 +100,11 @@ import Layout from '../../layouts/Layout.astro';
 <script>
   let currentStep = 1;
   let selectedRegion = 'both';
+  let selectedNiches: string[] = ['ia-negocios'];
   let audioFile: File | null = null;
 
   const regionLabels: Record<string, string> = { spain: '🇪🇸 España', latam: '🌎 LATAM', both: '🌍 Ambas' };
+  const nicheLabels: Record<string, string> = { 'ia-negocios': '🤖 IA & Negocios' };
 
   function showStep(step: number) {
     [1, 2, 3].forEach(s => {
@@ -118,6 +130,21 @@ import Layout from '../../layouts/Layout.astro';
         b.className = 'region-btn py-2 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors';
       });
       btn.className = 'region-btn py-2 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 transition-colors';
+    });
+  });
+
+  // Nichos (multi-select)
+  document.querySelectorAll('.niche-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const niche = (btn as HTMLElement).dataset.niche!;
+      if (selectedNiches.includes(niche)) {
+        if (selectedNiches.length === 1) return; // mínimo 1
+        selectedNiches = selectedNiches.filter(n => n !== niche);
+        btn.className = 'niche-btn py-2.5 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 text-left transition-colors';
+      } else {
+        selectedNiches.push(niche);
+        btn.className = 'niche-btn selected py-2.5 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 text-left transition-colors';
+      }
     });
   });
 
@@ -151,6 +178,7 @@ import Layout from '../../layouts/Layout.astro';
       <p><span class="font-medium">Email:</span> ${email}</p>
       <p><span class="font-medium">Telegram:</span> ${telegram}</p>
       <p><span class="font-medium">Región:</span> ${regionLabels[selectedRegion]}</p>
+      <p><span class="font-medium">Nichos:</span> ${selectedNiches.map(n => nicheLabels[n] || n).join(', ')}</p>
       <p><span class="font-medium">Audio:</span> ✓ ${audioFile.name}</p>
     `;
     showStep(3);
@@ -168,6 +196,7 @@ import Layout from '../../layouts/Layout.astro';
     data.append('email', (document.getElementById('email') as HTMLInputElement).value.trim());
     data.append('telegram', (document.getElementById('telegram') as HTMLInputElement).value.trim());
     data.append('region', selectedRegion);
+    data.append('niches', JSON.stringify(selectedNiches));
     data.append('audio', audioFile!);
 
     try {
