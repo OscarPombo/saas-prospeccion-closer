@@ -40,13 +40,8 @@ import Layout from '../../layouts/Layout.astro';
         </div>
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Nichos de infoproductores</label>
-          <p class="text-xs text-gray-400">Selecciona uno o varios. Puedes cambiarlos después.</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" data-niche="ia-negocios" class="niche-btn selected py-2.5 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 text-left transition-colors">🤖 IA & Negocios</button>
-            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">📱 Marketing Digital<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
-            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">🧠 Coaching & Mentoría<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
-            <button type="button" disabled class="py-2.5 px-3 rounded-lg border border-gray-100 bg-gray-50 text-sm font-medium text-gray-400 text-left cursor-not-allowed">💰 Finanzas<span class="block text-xs font-normal text-gray-400">Próximamente</span></button>
-          </div>
+          <p class="text-xs text-gray-400">Selecciona uno o varios. Los activos tienen prospección en marcha.</p>
+          <div id="niches-container" class="space-y-3 max-h-64 overflow-y-auto pr-1"></div>
         </div>
         <button id="next1" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors">
           Siguiente →
@@ -104,7 +99,106 @@ import Layout from '../../layouts/Layout.astro';
   let audioFile: File | null = null;
 
   const regionLabels: Record<string, string> = { spain: '🇪🇸 España', latam: '🌎 LATAM', both: '🌍 Ambas' };
-  const nicheLabels: Record<string, string> = { 'ia-negocios': '🤖 IA & Negocios' };
+  const NICHES: { category: string; items: { slug: string; name: string; active: boolean }[] }[] = [
+    { category: '🤖 IA', items: [
+      { slug: 'ia-negocios',       name: 'IA aplicada a negocios',            active: true },
+      { slug: 'automatizaciones',  name: 'Automatizaciones (n8n, Make…)',      active: false },
+      { slug: 'prompt-engineering',name: 'Prompt engineering / diseño con IA', active: false },
+      { slug: 'agencias-ia',       name: 'Agencias de IA / agentes',           active: false },
+    ]},
+    { category: '💼 Negocios', items: [
+      { slug: 'agencias-marketing',      name: 'Agencias de marketing digital',    active: false },
+      { slug: 'ecommerce-dropshipping',  name: 'Ecommerce y dropshipping',         active: false },
+      { slug: 'amazon-fba',              name: 'Amazon FBA / private label',       active: false },
+      { slug: 'consultoria-b2b',         name: 'Consultoría high-ticket B2B',      active: false },
+      { slug: 'formacion-closers',       name: 'Formación para closers',           active: false },
+      { slug: 'lanzamientos-plf',        name: 'Lanzamientos digitales (PLF)',     active: false },
+      { slug: 'micro-saas',              name: 'Micro-SaaS / indie hackers',       active: false },
+      { slug: 'servicios-productizados', name: 'Servicios productizados',          active: false },
+      { slug: 'compra-venta-negocios',   name: 'Compra-venta negocios online',     active: false },
+      { slug: 'lifestyle-business',      name: 'Lifestyle business',               active: false },
+    ]},
+    { category: '📱 Marketing', items: [
+      { slug: 'copywriting',         name: 'Copywriting de respuesta directa', active: false },
+      { slug: 'meta-ads',            name: 'Meta Ads / publicidad pagada',     active: false },
+      { slug: 'email-newsletters',   name: 'Email marketing y newsletters',    active: false },
+      { slug: 'growth-organico',     name: 'TikTok / Instagram growth',        active: false },
+      { slug: 'funnels',             name: 'Embudos de venta',                 active: false },
+      { slug: 'ugc-creator',         name: 'UGC creator',                      active: false },
+      { slug: 'youtube-monetizacion',name: 'YouTube monetización',             active: false },
+      { slug: 'seo-ia',              name: 'SEO con IA / contenido',           active: false },
+    ]},
+    { category: '💰 Finanzas', items: [
+      { slug: 'trading',                   name: 'Trading (forex, índices)',        active: false },
+      { slug: 'inmobiliaria',              name: 'Inversión inmobiliaria',          active: false },
+      { slug: 'crypto-web3',               name: 'Crypto y Web3',                  active: false },
+      { slug: 'libertad-financiera',       name: 'Educación financiera',           active: false },
+      { slug: 'bolsa-value',               name: 'Bolsa / value investing',        active: false },
+      { slug: 'real-estate-internacional', name: 'Real estate internacional',      active: false },
+      { slug: 'inversion-angel',           name: 'Inversión ángel',                active: false },
+    ]},
+    { category: '🧠 Desarrollo', items: [
+      { slug: 'alto-rendimiento',       name: 'Coaching alto rendimiento',      active: false },
+      { slug: 'mindset-abundancia',     name: 'Mentalidad y abundancia',        active: false },
+      { slug: 'liderazgo',              name: 'Liderazgo y equipos',            active: false },
+      { slug: 'productividad',          name: 'Productividad',                  active: false },
+      { slug: 'public-speaking',        name: 'Public speaking y oratoria',     active: false },
+      { slug: 'inteligencia-emocional', name: 'Inteligencia emocional',         active: false },
+    ]},
+    { category: '💪 Salud', items: [
+      { slug: 'perdida-peso',        name: 'Pérdida de peso premium',     active: false },
+      { slug: 'hipertrofia',         name: 'Hipertrofia y culturismo',    active: false },
+      { slug: 'biohacking-hormonal', name: 'Salud hormonal y biohacking', active: false },
+      { slug: 'salud-mental',        name: 'Salud mental y burnout',      active: false },
+      { slug: 'longevidad',          name: 'Longevidad y antiaging',      active: false },
+    ]},
+    { category: '❤️ Relaciones', items: [
+      { slug: 'seduccion-masculina', name: 'Seducción masculina',                active: false },
+      { slug: 'coaching-mujeres',    name: 'Coaching femenino (relaciones)',     active: false },
+      { slug: 'terapia-pareja',      name: 'Terapia de pareja y sexualidad',     active: false },
+    ]},
+    { category: '✨ Espiritualidad', items: [
+      { slug: 'coaching-transformacional', name: 'Coaching transformacional',   active: false },
+      { slug: 'mentoria-femenina',         name: 'Mentoría espiritual femenina', active: false },
+      { slug: 'astrologia-pro',            name: 'Astrología profesional',       active: false },
+    ]},
+    { category: '🎯 Skills', items: [
+      { slug: 'mentoria-inmobiliaria',      name: 'Mentoría para agentes inmobiliarios', active: false },
+      { slug: 'coaches-cobrar-mas',         name: 'Coaches que quieren cobrar más',      active: false },
+      { slug: 'musica-produccion',          name: 'Música y producción musical',         active: false },
+      { slug: 'coaching-ejecutivo-c-level', name: 'Coaching ejecutivo C-level',          active: false },
+    ]},
+  ];
+
+  // Renderizar nichos
+  const container = document.getElementById('niches-container')!;
+  NICHES.forEach(cat => {
+    const catEl = document.createElement('div');
+    catEl.innerHTML = `<p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">${cat.category}</p>`;
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-2 gap-1.5';
+    cat.items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      if (item.active) {
+        btn.dataset.niche = item.slug;
+        const isSelected = selectedNiches.includes(item.slug);
+        btn.className = `niche-btn py-2 px-2.5 rounded-lg border text-xs font-medium text-left transition-colors ${isSelected ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`;
+        btn.textContent = item.name;
+      } else {
+        btn.disabled = true;
+        btn.className = 'py-2 px-2.5 rounded-lg border border-gray-100 bg-gray-50 text-xs text-gray-400 text-left cursor-not-allowed';
+        btn.innerHTML = `${item.name}<span class="block text-gray-300 font-normal">Próximamente</span>`;
+      }
+      grid.appendChild(btn);
+    });
+    catEl.appendChild(grid);
+    container.appendChild(catEl);
+  });
+
+  const nicheLabels: Record<string, string> = Object.fromEntries(
+    NICHES.flatMap(c => c.items.map(i => [i.slug, i.name]))
+  );
 
   function showStep(step: number) {
     [1, 2, 3].forEach(s => {
@@ -133,19 +227,19 @@ import Layout from '../../layouts/Layout.astro';
     });
   });
 
-  // Nichos (multi-select)
-  document.querySelectorAll('.niche-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const niche = (btn as HTMLElement).dataset.niche!;
-      if (selectedNiches.includes(niche)) {
-        if (selectedNiches.length === 1) return; // mínimo 1
-        selectedNiches = selectedNiches.filter(n => n !== niche);
-        btn.className = 'niche-btn py-2.5 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 text-left transition-colors';
-      } else {
-        selectedNiches.push(niche);
-        btn.className = 'niche-btn selected py-2.5 px-3 rounded-lg border border-indigo-600 bg-indigo-50 text-sm font-medium text-indigo-700 text-left transition-colors';
-      }
-    });
+  // Nichos (multi-select) — delegación en el contenedor para botones generados dinámicamente
+  document.getElementById('niches-container')!.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.niche-btn') as HTMLButtonElement | null;
+    if (!btn || btn.disabled) return;
+    const niche = btn.dataset.niche!;
+    if (selectedNiches.includes(niche)) {
+      if (selectedNiches.length === 1) return;
+      selectedNiches = selectedNiches.filter(n => n !== niche);
+      btn.className = 'niche-btn py-2 px-2.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 text-left transition-colors hover:border-gray-300';
+    } else {
+      selectedNiches.push(niche);
+      btn.className = 'niche-btn py-2 px-2.5 rounded-lg border border-indigo-600 bg-indigo-50 text-xs font-medium text-indigo-700 text-left transition-colors';
+    }
   });
 
   // Paso 1 → 2
