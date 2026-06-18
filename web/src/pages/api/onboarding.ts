@@ -66,7 +66,16 @@ Devuelve SOLO el JSON, sin texto adicional:
       toneProfile = JSON.parse(raw.replace(/```json?\s*/gi, '').replace(/```/g, '').trim());
     } catch { /* usa el fallback */ }
 
-    // 3. Crear closer en Supabase
+    // 3. Convertir slugs de nichos a UUIDs
+    const nicheSlugs = niches.join(',');
+    const nichesRes = await fetch(
+      `${import.meta.env.SUPABASE_URL}/rest/v1/niches?slug=in.(${nicheSlugs})&select=id`,
+      { headers: { 'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`, 'apikey': import.meta.env.SUPABASE_SERVICE_KEY } }
+    );
+    const nicheRows: { id: string }[] = nichesRes.ok ? await nichesRes.json() : [];
+    const nicheIds = nicheRows.map(r => r.id);
+
+    // 4. Crear closer en Supabase
     const sbRes = await fetch(`${import.meta.env.SUPABASE_URL}/rest/v1/closers?on_conflict=email`, {
       method: 'POST',
       headers: {
@@ -86,7 +95,7 @@ Devuelve SOLO el JSON, sin texto adicional:
         status: 'active',
         timezone: 'Europe/Madrid',
         mode: 'both',
-        selected_niches: niches,
+        selected_niches: nicheIds,
       }),
     });
 
