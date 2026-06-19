@@ -9,11 +9,14 @@ export const POST: APIRoute = async ({ request }) => {
     const telegram = formData.get('telegram') as string;
     const region = formData.get('region') as string;
     const nichesRaw = formData.get('niches') as string;
-    const niches: string[] = nichesRaw ? JSON.parse(nichesRaw) : ['ia-negocios'];
+    const niches: string[] = nichesRaw ? JSON.parse(nichesRaw) : [];
     const audioFile = formData.get('audio') as File;
 
     if (!name || !email || !telegram || !audioFile) {
       return new Response(JSON.stringify({ error: 'Faltan campos obligatorios' }), { status: 400 });
+    }
+    if (!niches.length) {
+      return new Response(JSON.stringify({ error: 'Selecciona al menos un nicho' }), { status: 400 });
     }
 
     // 1. Transcribir audio con Whisper

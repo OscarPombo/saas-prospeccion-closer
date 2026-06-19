@@ -15,8 +15,74 @@ const BOT_TOKEN = $env.TELEGRAM_BOT_TOKEN;
 
 const body = $input.first().json.body;
 const cbq = body?.callback_query;
+const msg = body?.message;
 
-// Ignorar updates que no sean callback_query (mensajes normales, etc.)
+const SB_HEADERS = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'apikey': SUPABASE_KEY,
+};
+
+async function tgSend(chatId, text) {
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+  });
+}
+
+// ── /start: vincular telegram_chat_id al closer ───────────────────────────────
+if (msg?.text?.startsWith('/start')) {
+  const chatId = msg.chat.id;
+  const tgUsername = (msg.from?.username || '').toLowerCase().replace(/^@/, '');
+
+  // 1. Buscar por chat_id ya vinculado (cuentas antiguas o ya registradas)
+  let closer = null;
+  const byId = await (await fetch(
+    `${SUPABASE_URL}/rest/v1/closers?telegram_chat_id=eq.${chatId}&select=id,email,telegram_chat_id&limit=1`,
+    { headers: SB_HEADERS }
+  )).json();
+  if (Array.isArray(byId) && byId.length > 0) closer = byId[0];
+
+  // 2. Si no, buscar por telegram_username del formulario de registro
+  if (!closer && tgUsername) {
+    for (const uname of [tgUsername, '@' + tgUsername]) {
+      const rows = await (await fetch(
+        `${SUPABASE_URL}/rest/v1/closers?tone_profile->>telegram_username=eq.${encodeURIComponent(uname)}&select=id,email,telegram_chat_id&limit=1`,
+        { headers: SB_HEADERS }
+      )).json();
+      if (Array.isArray(rows) && rows.length > 0) { closer = rows[0]; break; }
+    }
+  }
+
+  if (!closer && !tgUsername) {
+    await tgSend(chatId, '⚠️ Tu cuenta de Telegram no tiene @username configurado. Ve a Ajustes → edita tu perfil y añade un nombre de usuario.');
+    return [{ json: { ok: false, reason: 'no username' } }];
+  }
+
+  if (!closer) {
+    await tgSend(chatId, '⚠️ No encontré tu registro. Asegúrate de haberte registrado primero en la web con el mismo @username de Telegram.');
+    return [{ json: { ok: false, reason: 'closer not found', tgUsername } }];
+  }
+
+  if (closer.telegram_chat_id) {
+    await tgSend(chatId, '✅ Tu cuenta ya estaba vinculada. Recibirás tus leads cada mañana a las 8:00.');
+    return [{ json: { ok: true, already_linked: true } }];
+  }
+
+  // Guardar chat_id
+  await fetch(`${SUPABASE_URL}/rest/v1/closers?id=eq.${closer.id}`, {
+    method: 'PATCH',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ telegram_chat_id: String(chatId) }),
+  });
+
+  await tgSend(chatId, `✅ *¡Cuenta vinculada!*\n\nPerfecto, ya está todo listo. Mañana a las *8:00* recibirás tus primeros 5 infoproductores cualificados con toda la información para entablar conversación.\n\nBienvenido a Soplo.`);
+  console.log(`/start: closer ${closer.email} vinculado → chat_id ${chatId}`);
+  return [{ json: { ok: true, linked: true, email: closer.email } }];
+}
+
+// Ignorar updates que no sean callback_query ni /start
 if (!cbq) return [{ json: { skipped: true, reason: 'no callback_query' } }];
 
 const callbackQueryId = cbq.id;
@@ -28,12 +94,6 @@ const messageId = cbq.message?.message_id;
 if (!assignmentId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(assignmentId)) {
   return [{ json: { skipped: true, reason: 'invalid callback_data' } }];
 }
-
-const SB_HEADERS = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
-  'apikey': SUPABASE_KEY,
-};
 
 // Marcar como usado en BD
 const patch = await fetch(`${SUPABASE_URL}/rest/v1/lead_assignments?id=eq.${assignmentId}`, {

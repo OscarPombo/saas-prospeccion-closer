@@ -11,6 +11,14 @@ async function fetch(url, opts) {
 
 function escMd(s) { return String(s || '').replace(/[_*`\[]/g, '\\$&'); }
 
+// Mismo criterio que en la asignación (04-messages.js): nunca se inventa un beneficio.
+// 'confirmado' = señal fuerte real, 'dudoso' = señal débil (se marca para que decida el closer).
+function computeOpportunityVerdict(adsCount, altoTicket, launchEvidence, friccion) {
+  if (adsCount >= 3 || launchEvidence?.snippet || altoTicket === 'si') return 'confirmado';
+  if (adsCount > 0 || friccion) return 'dudoso';
+  return 'sin_beneficio';
+}
+
 const SUPABASE_URL = $env.SUPABASE_URL;
 const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
 const BOT_TOKEN = $env.TELEGRAM_BOT_TOKEN;
@@ -49,6 +57,30 @@ async function tgSend(chatId, text, replyMarkup = null) {
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const SELLING_PLATFORMS = [
+  { name: 'Hotmart', patterns: ['hotmart.com'] },
+  { name: 'Kajabi', patterns: ['kajabi.com', 'mykajabi.com'] },
+  { name: 'Teachable', patterns: ['teachable.com'] },
+  { name: 'Systeme.io', patterns: ['systeme.io'] },
+  { name: 'ThriveCart', patterns: ['thrivecart.com'] },
+  { name: 'Stan Store', patterns: ['stan.store', 'stanwith.me'] },
+  { name: 'Podia', patterns: ['podia.com'] },
+  { name: 'Gumroad', patterns: ['gumroad.com'] },
+  { name: 'ClickFunnels', patterns: ['clickfunnels.com'] },
+  { name: 'Kartra', patterns: ['kartra.com'] },
+  { name: 'LearnWorlds', patterns: ['learnworlds.com'] },
+  { name: 'Udemy', patterns: ['udemy.com'] },
+];
+
+function detectPlatform(url) {
+  if (!url) return null;
+  const u = url.toLowerCase();
+  for (const pl of SELLING_PLATFORMS) {
+    if (pl.patterns.some(pat => u.includes(pat))) return pl.name;
+  }
+  return null;
+}
 
 // ── Todos los closers activos con telegram_chat_id ────────────────────────────
 const closers = await sbGet(`closers?status=eq.active&select=id,email,telegram_chat_id`);
@@ -93,15 +125,21 @@ for (const closer of closers) {
     if (!qp) continue;
 
     const [analysis] = await sbGet(
-      `prospect_analyses?prospect_id=eq.${asgn.prospect_id}&select=funnel_summary,classification,value_opportunities`
+      `prospect_analyses?prospect_id=eq.${asgn.prospect_id}&select=funnel_summary,classification,value_opportunities,creatives_analysis`
     );
 
     let funnelPromise = '';
     let funnelFricciones = [];
+    let altoTicket = 'desconocido';
+    let altoTicketRazon = '';
+    let launchEvidence = null;
     try {
       const fs = analysis?.funnel_summary ? JSON.parse(analysis.funnel_summary) : {};
       funnelPromise = fs.promesa || '';
       funnelFricciones = Array.isArray(fs.fricciones) ? fs.fricciones.slice(0, 2) : [];
+      altoTicket = String(fs.alto_ticket || 'desconocido').toLowerCase();
+      altoTicketRazon = fs.alto_ticket_razon || '';
+      launchEvidence = fs.launch_evidence || null;
     } catch {}
 
     const classLabel = analysis?.classification === 'launch' ? '🚀 Launch'
@@ -117,13 +155,16 @@ for (const closer of closers) {
 
     const landing = qp.platform_links?.landing || '';
     const igUrl = `https://www.instagram.com/${qp.handle}/`;
+    const adsCount = Array.isArray(analysis?.creatives_analysis) ? analysis.creatives_analysis.length : 0;
+    const sellingPlatform = detectPlatform(landing);
 
     // Dossier del lead — @handle es link clickable a Instagram
     const lines = [
       `*Lead ${i + 1}/${assignments.length} —* [@${qp.handle}](${igUrl})${classLabel ? ` · ${classLabel}` : ''}`,
       `👥 ${qp.followers?.toLocaleString('es-ES')} seguidores`,
     ];
-    if (landing) lines.push(`🌐 [Landing](${landing})`);
+    if (adsCount > 0) lines.push(`📢 *Publicidad activa:* ${adsCount} anuncio${adsCount > 1 ? 's' : ''} Meta Ads`);
+    if (landing) lines.push(`🌐 [Landing](${landing})${sellingPlatform ? ` · ${sellingPlatform}` : ''}`);
 
     if (funnelPromise) lines.push(`📊 ${escMd(funnelPromise)}`);
     if (funnelFricciones.length) lines.push(`⚡ *Fricción:* ${funnelFricciones.map(escMd).join(' · ')}`);
@@ -133,6 +174,42 @@ for (const closer of closers) {
       const daysAgo = Math.floor((Date.now() - new Date(reels[0].date)) / 86400000);
       const views = reels[0].views > 0 ? ` · ${(reels[0].views/1000).toFixed(1)}K views` : '';
       lines.push(`🎬 Último reel: hace ${daysAgo}d${views}`);
+    }
+
+    // Razonamiento — por qué la app lo recomienda. Cada razón lleva su evidencia concreta
+    // (la frase exacta, la fuente) en vez de una etiqueta a ciegas, para que el closer confíe en el dato.
+    const reasons = [];
+    if (adsCount >= 3) reasons.push(`📢 ${adsCount} anuncios activos en Meta — invirtiendo para cerrar`);
+    else if (adsCount > 0) reasons.push(`📢 Publicidad activa en Meta`);
+    if (analysis?.classification === 'launch') {
+      if (launchEvidence?.snippet) {
+        reasons.push(`🚀 Lanzamiento detectado en ${launchEvidence.source}: "${launchEvidence.snippet}"`);
+      } else {
+        reasons.push('🚀 Lanzamiento activo detectado');
+      }
+    }
+    if (reels.length > 0 && reels[0].date) {
+      const daysAgo = Math.floor((Date.now() - new Date(reels[0].date)) / 86400000);
+      if (daysAgo <= 7) {
+        const views = reels[0].views > 0 ? ` · ${(reels[0].views/1000).toFixed(1)}K views` : '';
+        reasons.push(`🎬 Publicó hace ${daysAgo}d${views}`);
+      }
+    }
+    if (altoTicket === 'si') {
+      reasons.push(altoTicketRazon ? `💎 Alto ticket: ${altoTicketRazon}` : '💎 Oferta de alto ticket confirmada por Soplo');
+    }
+    if (sellingPlatform) reasons.push(`🛒 Vende en ${sellingPlatform}`);
+    if (funnelFricciones[0]) reasons.push(`⚡ Fricción que podrías ayudar a resolver: "${funnelFricciones[0]}"`);
+
+    const verdict = computeOpportunityVerdict(adsCount, altoTicket, launchEvidence, funnelFricciones[0] || null);
+    if (reasons.length > 0) {
+      lines.push('');
+      if (verdict === 'confirmado') {
+        lines.push('🎯 *Por qué contactar:*');
+      } else {
+        lines.push('⚠️ *Señal dudosa — valora tú si merece la pena:*');
+      }
+      reasons.forEach(r => lines.push(`· ${escMd(r)}`));
     }
 
     if (opportunityText) {

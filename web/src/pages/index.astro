@@ -1,44 +1,338 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout>
-  <main class="min-h-screen flex flex-col items-center justify-center px-4">
-    <div class="max-w-xl w-full text-center space-y-8">
+<Layout title="Soplo — 5 infoproductores cualificados cada mañana">
 
-      <div class="space-y-3">
-        <p class="text-sm font-semibold tracking-widest text-indigo-600 uppercase">Soplo</p>
-        <h1 class="text-4xl font-bold text-gray-900 leading-tight">
-          5 leads de infoproductores cada mañana, con el mensaje ya escrito
-        </h1>
-        <p class="text-lg text-gray-500">
-          Análisis automático del embudo, reels y oportunidades de cada prospecto.
-          El mensaje llega personalizado a tu tono, listo para copiar en DM.
-        </p>
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100">
+    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <span class="text-xl font-bold tracking-tight text-gray-900">Soplo</span>
+      <a href="/onboarding" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+        Empieza gratis
+      </a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="bg-white pt-24 pb-20 px-6">
+    <div class="max-w-3xl mx-auto text-center space-y-7">
+      <p class="text-sm font-semibold tracking-widest text-indigo-500 uppercase">Para closers de infoproductos</p>
+      <h1 class="text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
+        Deja de perder el día<br class="hidden sm:block" /> buscando a quién prospectar
+      </h1>
+      <p class="text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto">
+        Cada mañana recibes 5 infoproductores cualificados en Telegram — con su análisis completo
+        y el mensaje ya escrito a tu forma de hablar. Solo copia y envía.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+        <a href="/onboarding" class="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-colors">
+          Empieza la prueba gratuita
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </a>
+      </div>
+      <p class="text-sm text-gray-400">Beta cerrada · Sin tarjeta de crédito</p>
+    </div>
+  </section>
+
+  <!-- PAIN -->
+  <section class="bg-gray-50 py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl font-bold text-gray-900">El prospecting manual te roba el tiempo que deberías dedicar a cerrar</h2>
+        <p class="mt-4 text-lg text-gray-500">Esto es lo que hace la mayoría de closers cada día:</p>
       </div>
 
-      <ul class="text-left space-y-3 text-gray-700">
-        <li class="flex items-start gap-2">
-          <span class="text-indigo-500 font-bold mt-0.5">✓</span>
-          <span>Solo infoproductores con landing activa y actividad reciente en Instagram</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <span class="text-indigo-500 font-bold mt-0.5">✓</span>
-          <span>Mensaje escrito a tu forma de hablar, no a la de una IA genérica</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <span class="text-indigo-500 font-bold mt-0.5">✓</span>
-          <span>Lo recibes en Telegram cada día a las 8:00</span>
-        </li>
-      </ul>
-
-      <a
-        href="/onboarding"
-        class="inline-block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-colors"
-      >
-        Quiero probarlo →
-      </a>
-
-      <p class="text-sm text-gray-400">Beta cerrada · Sin compromiso</p>
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div class="text-2xl mb-3">😮‍💨</div>
+          <h3 class="font-semibold text-gray-900 mb-1">Scrolling infinito</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">30-40 minutos en Instagram mirando perfiles, la mitad sin landing, la otra mitad sin publicar desde hace meses.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div class="text-2xl mb-3">🔍</div>
+          <h3 class="font-semibold text-gray-900 mb-1">Calificación manual</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">¿Tiene oferta activa? ¿Publica reels? ¿Cuántos seguidores tiene? ¿Es de habla española? Cada prospecto es media hora de investigación.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div class="text-2xl mb-3">✍️</div>
+          <h3 class="font-semibold text-gray-900 mb-1">El mensaje en blanco</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Cuando por fin encuentras uno que vale, no sabes cómo abrir sin sonar a spam genérico. Y si lo suenas, da igual todo lo demás.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div class="text-2xl mb-3">📉</div>
+          <h3 class="font-semibold text-gray-900 mb-1">2 mensajes al día, con suerte</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Después de todo ese trabajo, contactas 2-3 personas al día. La mayoría no responden porque el mensaje no tenía un gancho real.</p>
+        </div>
+      </div>
     </div>
-  </main>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="bg-white py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-gray-900">Así funciona Soplo</h2>
+        <p class="mt-4 text-lg text-gray-500">Configuras una vez. Después solo abres Telegram.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-10">
+        <div class="text-center space-y-4">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xl flex items-center justify-center mx-auto">1</div>
+          <h3 class="font-bold text-gray-900 text-lg">Graba 60 segundos de audio</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Habla como hablas tú: un día normal, un mensaje a un colega. Soplo analiza tu estilo, tu registro y tu forma de cerrar.</p>
+        </div>
+        <div class="text-center space-y-4">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xl flex items-center justify-center mx-auto">2</div>
+          <h3 class="font-bold text-gray-900 text-lg">El pipeline trabaja mientras duermes</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Cada noche Soplo rastrea Instagram, filtra infoproductores con audiencia real, landing activa y actividad reciente en tu nicho.</p>
+        </div>
+        <div class="text-center space-y-4">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xl flex items-center justify-center mx-auto">3</div>
+          <h3 class="font-bold text-gray-900 text-lg">A las 8:00, lo tienes en Telegram</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Cinco dossiers con todo lo que necesitas saber de cada prospecto. Y el mensaje listo para copiar y enviar en DM.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOSSIER PREVIEW -->
+  <section class="bg-gray-50 py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl font-bold text-gray-900">Esto es lo que recibes cada mañana</h2>
+        <p class="mt-4 text-lg text-gray-500">Un dossier completo por cada infoproductor. Sin formato corporativo. Sin relleno.</p>
+      </div>
+
+      <div class="max-w-sm mx-auto">
+        <!-- Telegram mock -->
+        <div class="bg-[#17212b] rounded-2xl overflow-hidden shadow-2xl">
+          <!-- Header -->
+          <div class="bg-[#1f2d3a] px-4 py-3 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-bold">S</div>
+            <div>
+              <p class="text-white text-sm font-semibold leading-none">Soplo Pipeline</p>
+              <p class="text-[#8196a7] text-xs mt-0.5">bot</p>
+            </div>
+          </div>
+          <!-- Message bubble -->
+          <div class="p-4 space-y-2">
+            <div class="bg-[#182533] rounded-xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed">
+              <p class="text-white font-semibold mb-2">Lead 1/5 — <span class="text-[#5b9bd5]">@martagarcia_coach</span> · 🔄 Evergreen</p>
+              <p class="text-[#8196a7]">👥 34.200 seguidores</p>
+              <p class="text-[#8196a7]">📢 <span class="text-white font-medium">Publicidad activa:</span> 4 anuncios Meta Ads</p>
+              <p class="text-[#8196a7]">🌐 <span class="text-[#5b9bd5]">Landing</span> · Kajabi</p>
+              <p class="text-[#8196a7] mt-1">📊 Ayudo a mujeres a crear negocios digitales rentables sin sacrificar su familia</p>
+              <p class="text-[#8196a7]">⚡ <span class="text-white font-medium">Fricción:</span> Formulario largo antes del precio</p>
+              <p class="text-[#8196a7]">🎬 Último reel: hace 2d · 18,4K views</p>
+              <div class="mt-2 pt-2 border-t border-[#2b3e50]">
+                <p class="text-white font-medium mb-1">🎯 Por qué contactar:</p>
+                <p class="text-[#8196a7]">· 📢 4 anuncios activos en Meta — invirtiendo para cerrar</p>
+                <p class="text-[#8196a7]">· 💎 Oferta de alto ticket</p>
+                <p class="text-[#8196a7]">· 🛒 Vende en Kajabi</p>
+              </div>
+              <div class="mt-2 pt-2 border-t border-[#2b3e50]">
+                <p class="text-white font-medium mb-1">💡 Oportunidad (Embudo):</p>
+                <p class="text-[#8196a7]">El formulario tiene 7 campos antes de mostrar el precio — la mayoría abandona antes de ver la oferta.</p>
+              </div>
+            </div>
+            <!-- Message to copy -->
+            <div class="bg-[#182533] rounded-xl rounded-tl-sm px-4 py-3 font-mono text-xs text-[#8196a7] leading-relaxed">
+              Estaba mirando tu landing y vi algo en el paso antes de que agendes una llamada que le podría mejorar bastante la conversión. Si te interesa te cuento.
+              <div class="mt-2 flex justify-end">
+                <span class="text-xs text-[#4e7c99] bg-[#1f2d3a] px-2 py-1 rounded">📋 Copiar</span>
+              </div>
+            </div>
+            <p class="text-[#4e7c99] text-xs text-right pr-1">08:00 ✓✓</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY SOPLO -->
+  <section class="bg-white py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl font-bold text-gray-900">Por qué no es una herramienta más de leads</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">El mensaje suena a ti, no a IA</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Soplo aprende tu forma de hablar de un audio de 60 segundos. El mensaje que te envía es el que tú habrías escrito.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">Leads en exclusiva</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Cada infoproductor se asigna a un solo closer. Nadie más recibirá el mismo lead el mismo día.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">Publicidad activa como filtro clave</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Priorizamos infoproductores con anuncios activos en Meta. Si están pagando por tráfico, están intentando cerrar.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">Solo habla española</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Filtramos cualquier perfil en portugués, inglés o francés. Todos los leads son infoproductores hispanohablantes.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">El sweet spot del acceso directo</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">10K-100K seguidores. Suficiente autoridad para tener una oferta real, lo justo para que el infoproductor aún responda sus DMs.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-1">150 leads al mes sin levantar un dedo</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">5 cada día, en tu Telegram, a las 8:00. Sin dashboards que revisar, sin listas que gestionar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING / EARLY ACCESS -->
+  <section class="bg-indigo-600 py-24 px-6">
+    <div class="max-w-2xl mx-auto text-center space-y-8">
+      <div class="inline-block bg-indigo-500 text-indigo-100 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-widest">Acceso anticipado</div>
+      <h2 class="text-4xl font-extrabold text-white leading-tight">
+        Entra ahora y bloquea el precio de lanzamiento
+      </h2>
+      <p class="text-indigo-200 text-lg leading-relaxed">
+        Soplo está en beta cerrada. Los primeros closers que se registren acceden al precio de lanzamiento — y lo mantienen aunque el precio suba.
+      </p>
+      <div class="bg-white rounded-2xl p-8 text-left space-y-5 shadow-xl">
+        <ul class="space-y-3">
+          {[
+            '5 infoproductores cualificados cada mañana',
+            'Dossier completo: embudo, reels, publicidad activa',
+            'Mensaje escrito a tu tono, listo para copiar',
+            'Lead exclusivo — nadie más lo recibe ese día',
+            'Todos los nichos disponibles',
+            'Entrega en Telegram a las 8:00',
+          ].map(item => (
+            <li class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              <span class="text-gray-700 text-sm">{item}</span>
+            </li>
+          ))}
+        </ul>
+        <a href="/onboarding" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl text-center text-lg transition-colors mt-6">
+          Quiero acceso anticipado →
+        </a>
+        <p class="text-center text-gray-400 text-sm">Sin tarjeta de crédito · Cancela cuando quieras</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="bg-white py-24 px-6">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl font-bold text-gray-900">Preguntas frecuentes</h2>
+      </div>
+
+      <div class="space-y-6">
+        <details class="group border border-gray-200 rounded-2xl overflow-hidden">
+          <summary class="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
+            ¿Tengo que instalar algo?
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">
+            No. Soplo funciona a través de Telegram. Una vez que completas el onboarding, vinculas tu cuenta de Telegram y los leads llegan solos cada mañana. Nada que instalar, nada que configurar después.
+          </div>
+        </details>
+
+        <details class="group border border-gray-200 rounded-2xl overflow-hidden">
+          <summary class="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
+            ¿Los mensajes van a sonar a IA?
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">
+            No, si grabas el audio bien. Durante el onboarding, grabas un fragmento hablando de forma natural — como si le contaras algo a un colega. Soplo analiza tu ritmo, tus muletillas y tu forma de cerrar. El mensaje generado refleja tu voz, no la de una IA genérica.
+          </div>
+        </details>
+
+        <details class="group border border-gray-200 rounded-2xl overflow-hidden">
+          <summary class="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
+            ¿Y si otro closer recibe el mismo infoproductor?
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">
+            No puede ocurrir. Cada infoproductor se asigna en exclusiva a un solo closer y queda bloqueado durante 30 días. Si dos closers trabajan el mismo nicho, el pipeline garantiza que nunca reciben el mismo lead el mismo día.
+          </div>
+        </details>
+
+        <details class="group border border-gray-200 rounded-2xl overflow-hidden">
+          <summary class="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
+            ¿Qué nicho cubre Soplo ahora mismo?
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">
+            En la beta cubrimos infoproductores hispanohablantes de IA aplicada a negocios, marketing digital, coaching y otros nichos en expansión. Durante el onboarding puedes seleccionar hasta 5 nichos. El pipeline prioriza los tuyos.
+          </div>
+        </details>
+
+        <details class="group border border-gray-200 rounded-2xl overflow-hidden">
+          <summary class="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
+            ¿Sirve si soy nuevo en el cierre?
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">
+            Sí. Soplo resuelve el problema que más tiempo roba: encontrar a quién contactar y saber qué decirle. Si eres nuevo, ya partes con el trabajo de investigación y el primer mensaje resueltos. Solo te queda gestionar la conversación.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="bg-gray-50 py-24 px-6">
+    <div class="max-w-2xl mx-auto text-center space-y-6">
+      <h2 class="text-4xl font-extrabold text-gray-900 leading-tight">
+        Empieza mañana con los primeros 5 leads
+      </h2>
+      <p class="text-lg text-gray-500">
+        El registro tarda 3 minutos. Mañana a las 8:00, los tienes en Telegram.
+      </p>
+      <a href="/onboarding" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-xl text-lg transition-colors">
+        Empieza gratis
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </a>
+      <p class="text-sm text-gray-400">Beta cerrada · Sin tarjeta de crédito · Cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-gray-100 py-8 px-6">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <span class="font-bold text-gray-900">Soplo</span>
+      <p class="text-sm text-gray-400">© 2025 Soplo. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
 </Layout>
