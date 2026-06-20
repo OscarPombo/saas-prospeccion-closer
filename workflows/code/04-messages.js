@@ -206,14 +206,19 @@ for (const closer of closers) {
     return picked;
   }
 
-  let top = balancedPick(candidatesByTier[1], 5);
+  // Pool más amplio que 5: si un candidato falla durante el procesamiento (sin datos para
+  // el mensaje, Claude devuelve vacío, error de red), antes se perdía esa plaza sin más —
+  // ahora el pool tiene margen para que el siguiente candidato la cubra y la cuota de 5 no
+  // dependa de que los 5 primeros elegidos funcionen a la primera.
+  const POOL_SIZE = 20;
+  let candidatePool = balancedPick(candidatesByTier[1], POOL_SIZE);
   let usedTier2 = false, usedTier3 = false;
-  if (top.length < 5) { usedTier2 = candidatesByTier[2].length > 0; top = top.concat(balancedPick(candidatesByTier[2], 5 - top.length)); }
-  if (top.length < 5) { usedTier3 = candidatesByTier[3].length > 0; top = top.concat(balancedPick(candidatesByTier[3], 5 - top.length)); }
+  if (candidatePool.length < POOL_SIZE) { usedTier2 = candidatesByTier[2].length > 0; candidatePool = candidatePool.concat(balancedPick(candidatesByTier[2], POOL_SIZE - candidatePool.length)); }
+  if (candidatePool.length < POOL_SIZE) { usedTier3 = candidatesByTier[3].length > 0; candidatePool = candidatePool.concat(balancedPick(candidatesByTier[3], POOL_SIZE - candidatePool.length)); }
 
   const tierNote = usedTier3 ? ' (con fallback a cualquier niche)' : usedTier2 ? ' (con fallback a misma categoría)' : '';
-  console.log(`[${closer.email}] Candidatos: niche=${candidatesByTier[1].length} categoría=${candidatesByTier[2].length} otros=${candidatesByTier[3].length} → seleccionados: ${top.length}${tierNote}`);
-  if (!top.length) continue;
+  console.log(`[${closer.email}] Candidatos: niche=${candidatesByTier[1].length} categoría=${candidatesByTier[2].length} otros=${candidatesByTier[3].length} → pool disponible: ${candidatePool.length}${tierNote}`);
+  if (!candidatePool.length) continue;
 
   // System prompt con el tono de este closer
   const systemPrompt = `Eres este closer escribiendo un mensaje de Instagram a un infoproductor.
@@ -230,7 +235,9 @@ Formalidad: ${ss.formality_level || 2}/5
 EJEMPLOS DE CÓMO HABLA ESTE CLOSER:
 ${transcripts.slice(0, 3).map(t => t.text?.slice(0, 400)).join('\n---\n')}`;
 
-  for (const analysis of top) {
+  let sentForThisCloser = 0;
+  for (const analysis of candidatePool) {
+    if (sentForThisCloser >= 5) break; // cuota de 5 ya cubierta con candidatos que sí funcionaron
     try {
     const [qp] = await sbGet(`qualified_prospects?id=eq.${analysis.prospect_id}&select=handle,platform_links,followers`);
     if (!qp) continue;
@@ -316,6 +323,7 @@ Devuelve SOLO el texto del mensaje. Sin comillas, sin explicaciones.`;
       globallyAssigned.add(analysis.prospect_id); // evita que este prospect vaya a otro closer en esta misma ejecución
       allPreviews.push({ closer: closer.email, handle: qp.handle, message: messageText.slice(0, 80) + '...' });
       totalMessages++;
+      sentForThisCloser++;
     }
     } catch (e) {
       // Aislado: un fallo generando este mensaje no debe impedir los demás leads del mismo closer
@@ -323,7 +331,10 @@ Devuelve SOLO el texto del mensaje. Sin comillas, sin explicaciones.`;
     }
   }
 
-  console.log(`[${closer.email}] Mensajes generados: ${top.length}`);
+  console.log(`[${closer.email}] Mensajes generados: ${sentForThisCloser}/5`);
+  if (sentForThisCloser < 5) {
+    console.log(`⚠️ [${closer.email}] No se llegó a 5 incluso agotando el pool de ${candidatePool.length} candidatos — oferta insuficiente en todo el sistema hoy, no un fallo de selección.`);
+  }
   } catch (e) {
     // Aislado: un fallo con este closer no debe impedir que los demás closers reciban sus leads
     console.log(`[${closer.email}] Procesamiento falló (no bloqueante): ${e.message}`);
