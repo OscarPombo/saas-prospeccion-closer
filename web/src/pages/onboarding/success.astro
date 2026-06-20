@@ -1,5 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+
+const token = Astro.url.searchParams.get('token') || '';
+const telegramLink = token ? `https://t.me/oscar_prospeccion_bot?start=${token}` : null;
 ---
 <Layout title="¡Bienvenido! — Soplo">
   <main class="min-h-screen flex flex-col items-center justify-center px-4">
@@ -10,22 +13,20 @@ import Layout from '../../layouts/Layout.astro';
         <p class="text-gray-500">Tu perfil de tono ha sido creado. Solo falta conectar tu Telegram.</p>
       </div>
 
-      <div class="bg-indigo-50 rounded-2xl p-6 text-left space-y-4">
+      <div class="bg-indigo-50 rounded-2xl p-6 text-center space-y-4">
         <p class="font-semibold text-indigo-900">Último paso — conecta Telegram:</p>
-        <ol class="space-y-3 text-sm text-indigo-800">
-          <li class="flex items-start gap-3">
-            <span class="bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-            <span>Abre Telegram y busca <strong>@oscar_prospeccion_bot</strong></span>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-            <span>Escribe <strong>/start</strong> y pulsa enviar</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
-            <span>Mañana a las <strong>8:00</strong> recibirás tus primeros leads</span>
-          </li>
-        </ol>
+        {telegramLink ? (
+          <a
+            href={telegramLink}
+            class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-colors"
+          >
+            Abrir Telegram y vincular →
+          </a>
+        ) : (
+          <p class="text-sm text-red-600">No se encontró tu enlace de vinculación. Vuelve a intentar el registro o escríbenos.</p>
+        )}
+        <p class="text-xs text-indigo-700">Se abrirá tu chat con el bot, ya con el mensaje listo — solo tienes que pulsar enviar.</p>
+        <p class="text-xs text-indigo-400">Mañana a las 8:00 recibirás tus primeros leads.</p>
       </div>
 
       <p class="text-sm text-gray-400">

@@ -12,6 +12,18 @@ async function fetch(url, opts) {
 const SUPABASE_URL = $env.SUPABASE_URL;
 const SUPABASE_KEY = $env.SUPABASE_SERVICE_KEY;
 const BOT_TOKEN = $env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_SECRET = $env.TELEGRAM_WEBHOOK_SECRET;
+
+// Validar que la petición viene realmente de Telegram (no falsificada por un tercero que
+// conozca la URL del webhook). Telegram envía este header en cada llamada cuando el webhook
+// se registró con secret_token vía setWebhook — sin esto, cualquiera podría simular un
+// mensaje de Telegram con un POST directo a esta URL.
+const incomingHeaders = $input.first().json.headers || {};
+const incomingSecret = incomingHeaders['x-telegram-bot-api-secret-token'] || incomingHeaders['X-Telegram-Bot-Api-Secret-Token'];
+if (!WEBHOOK_SECRET || incomingSecret !== WEBHOOK_SECRET) {
+  console.log('Webhook rechazado: secret_token ausente o inválido');
+  return [{ json: { ok: false, reason: 'invalid secret token' } }];
+}
 
 const body = $input.first().json.body;
 const cbq = body?.callback_query;
@@ -31,50 +43,46 @@ async function tgSend(chatId, text) {
   });
 }
 
-// ── /start: vincular telegram_chat_id al closer ───────────────────────────────
+// ── /start <token>: vincular telegram_chat_id al closer mediante token único ──────────
+// El token se genera en el registro web y llega aquí vía enlace profundo
+// (https://t.me/bot?start=TOKEN). Ya no se vincula por @username — cualquiera podía
+// escribir el username de otro closer en el formulario y robarle la cuenta.
 if (msg?.text?.startsWith('/start')) {
   const chatId = msg.chat.id;
-  const tgUsername = (msg.from?.username || '').toLowerCase().replace(/^@/, '');
+  const token = msg.text.trim().split(/\s+/)[1] || null;
 
-  // 1. Buscar por chat_id ya vinculado (cuentas antiguas o ya registradas)
-  let closer = null;
+  // 1. Si este chat ya está vinculado a un closer, no hace falta nada más
   const byId = await (await fetch(
-    `${SUPABASE_URL}/rest/v1/closers?telegram_chat_id=eq.${chatId}&select=id,email,telegram_chat_id&limit=1`,
+    `${SUPABASE_URL}/rest/v1/closers?telegram_chat_id=eq.${chatId}&select=id,email&limit=1`,
     { headers: SB_HEADERS }
   )).json();
-  if (Array.isArray(byId) && byId.length > 0) closer = byId[0];
-
-  // 2. Si no, buscar por telegram_username del formulario de registro
-  if (!closer && tgUsername) {
-    for (const uname of [tgUsername, '@' + tgUsername]) {
-      const rows = await (await fetch(
-        `${SUPABASE_URL}/rest/v1/closers?tone_profile->>telegram_username=eq.${encodeURIComponent(uname)}&select=id,email,telegram_chat_id&limit=1`,
-        { headers: SB_HEADERS }
-      )).json();
-      if (Array.isArray(rows) && rows.length > 0) { closer = rows[0]; break; }
-    }
-  }
-
-  if (!closer && !tgUsername) {
-    await tgSend(chatId, '⚠️ Tu cuenta de Telegram no tiene @username configurado. Ve a Ajustes → edita tu perfil y añade un nombre de usuario.');
-    return [{ json: { ok: false, reason: 'no username' } }];
-  }
-
-  if (!closer) {
-    await tgSend(chatId, '⚠️ No encontré tu registro. Asegúrate de haberte registrado primero en la web con el mismo @username de Telegram.');
-    return [{ json: { ok: false, reason: 'closer not found', tgUsername } }];
-  }
-
-  if (closer.telegram_chat_id) {
+  if (Array.isArray(byId) && byId.length > 0) {
     await tgSend(chatId, '✅ Tu cuenta ya estaba vinculada. Recibirás tus leads cada mañana a las 8:00.');
     return [{ json: { ok: true, already_linked: true } }];
   }
 
-  // Guardar chat_id
+  if (!token) {
+    await tgSend(chatId, '⚠️ Para vincular tu cuenta, usa el botón "Abrir Telegram y vincular" de la página de registro en la web — no escribas /start manualmente.');
+    return [{ json: { ok: false, reason: 'no token' } }];
+  }
+
+  // 2. Vincular por token único (de uso único — se anula tras vincular)
+  const rows = await (await fetch(
+    `${SUPABASE_URL}/rest/v1/closers?link_token=eq.${encodeURIComponent(token)}&select=id,email&limit=1`,
+    { headers: SB_HEADERS }
+  )).json();
+  const closer = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+
+  if (!closer) {
+    await tgSend(chatId, '⚠️ Este enlace de vinculación no es válido o ya se usó. Vuelve a registrarte en la web para generar uno nuevo.');
+    return [{ json: { ok: false, reason: 'invalid token' } }];
+  }
+
+  // Guardar chat_id y anular el token (uso único, no se puede reutilizar ni compartir)
   await fetch(`${SUPABASE_URL}/rest/v1/closers?id=eq.${closer.id}`, {
     method: 'PATCH',
     headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ telegram_chat_id: String(chatId) }),
+    body: JSON.stringify({ telegram_chat_id: String(chatId), link_token: null }),
   });
 
   await tgSend(chatId, `✅ *¡Cuenta vinculada!*\n\nPerfecto, ya está todo listo. Mañana a las *8:00* recibirás tus primeros 5 infoproductores cualificados con toda la información para entablar conversación.\n\nBienvenido a Soplo.`);

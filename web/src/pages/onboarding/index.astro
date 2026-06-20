@@ -26,10 +26,6 @@ import Layout from '../../layouts/Layout.astro';
           <label class="block text-sm font-medium text-gray-700">Email</label>
           <input id="email" type="email" placeholder="tu@email.com" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
-        <div class="space-y-1">
-          <label class="block text-sm font-medium text-gray-700">Username de Telegram</label>
-          <input id="telegram" type="text" placeholder="@tunombre" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Región de prospectos</label>
           <div class="grid grid-cols-3 gap-2">
@@ -223,8 +219,7 @@ import Layout from '../../layouts/Layout.astro';
   document.getElementById('next1')!.addEventListener('click', () => {
     const name = (document.getElementById('name') as HTMLInputElement).value.trim();
     const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-    const telegram = (document.getElementById('telegram') as HTMLInputElement).value.trim();
-    if (!name || !email || !telegram) { showError('Rellena todos los campos.'); return; }
+    if (!name || !email) { showError('Rellena todos los campos.'); return; }
     if (selectedNiches.length === 0) { showError('Selecciona al menos un nicho.'); return; }
     showStep(2);
   });
@@ -244,11 +239,9 @@ import Layout from '../../layouts/Layout.astro';
     if (!audioFile) { showError('Sube tu audio primero.'); return; }
     const name = (document.getElementById('name') as HTMLInputElement).value.trim();
     const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-    const telegram = (document.getElementById('telegram') as HTMLInputElement).value.trim();
     document.getElementById('summary')!.innerHTML = `
       <p><span class="font-medium">Nombre:</span> ${name}</p>
       <p><span class="font-medium">Email:</span> ${email}</p>
-      <p><span class="font-medium">Telegram:</span> ${telegram}</p>
       <p><span class="font-medium">Región:</span> ${regionLabels[selectedRegion]}</p>
       <p><span class="font-medium">Nichos:</span> ${selectedNiches.map(n => nicheLabels[n] || n).join(', ')}</p>
       <p><span class="font-medium">Audio:</span> ✓ ${audioFile.name}</p>
@@ -266,7 +259,6 @@ import Layout from '../../layouts/Layout.astro';
     const data = new FormData();
     data.append('name', (document.getElementById('name') as HTMLInputElement).value.trim());
     data.append('email', (document.getElementById('email') as HTMLInputElement).value.trim());
-    data.append('telegram', (document.getElementById('telegram') as HTMLInputElement).value.trim());
     data.append('region', selectedRegion);
     data.append('niches', JSON.stringify(selectedNiches));
     data.append('audio', audioFile!);
@@ -275,7 +267,7 @@ import Layout from '../../layouts/Layout.astro';
       const res = await fetch('/api/onboarding', { method: 'POST', body: data });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al procesar');
-      window.location.href = '/onboarding/success';
+      window.location.href = `/onboarding/success?token=${encodeURIComponent(json.linkToken)}`;
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : 'Error inesperado');
       btn.disabled = false;

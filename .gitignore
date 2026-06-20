@@ -4,6 +4,7 @@
 .env.*.local
 .env.production
 *.env
+server-keys/
 
 # n8n data local
 n8n_data/

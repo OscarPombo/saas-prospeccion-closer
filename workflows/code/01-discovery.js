@@ -132,10 +132,12 @@ for (const q of allQualified) {
 }
 
 const allActiveSlugs = [...neededNicheIdSet].map(id => nicheSlugById.get(id)).filter(Boolean);
+const bufferBySlug = new Map();
 const activeSlugs = [...neededNicheIdSet]
   .filter(id => {
     const buffer = bufferByNicheId.get(id) || 0;
     const slug = nicheSlugById.get(id) || id;
+    bufferBySlug.set(slug, buffer);
     if (buffer >= MIN_BUFFER_PER_NICHE) {
       console.log(`  [${slug}] buffer suficiente (${buffer} disponibles) — se omite discovery hoy, ahorro de coste`);
       return false;
@@ -157,32 +159,39 @@ if (activeSlugs.length === 0) {
 // del nodo — con muchos niches activos, hacerlo uno a uno supera el timeout del Task Runner de n8n.
 const usernameToNiche = new Map(); // username -> primer niche donde se encontró
 
-// Volumen recortado para controlar coste de Apify: con pocos closers, el coste de rastrear
-// muchos niches se reparte entre poca gente. Recorte moderado (no agresivo) para no arriesgar
-// la garantía de 5 leads/día — si el % de cualificación es bajo, menos volumen de entrada puede
-// dejar a un niche por debajo de su cuota. El ahorro principal viene del buffer-skip (arriba).
-const HASHTAGS_PER_NICHE = 4;
-const RESULTS_LIMIT_PER_HASHTAG_BATCH = 30;
-const USERNAMES_PER_NICHE = 25;
+// Volumen de búsqueda escalado según el buffer real del niche — no es lo mismo "ya tiene algo
+// de colchón, solo hay que reponer" que "está completamente vacío, hay que sembrarlo fuerte".
+// Aplicar el mismo recorte a ambos casos podría dejar a un niche recién elegido por un closer
+// sin suficientes leads el primer día. El ahorro de coste sigue viniendo del buffer-skip arriba;
+// esto solo evita que el recorte sea demasiado agresivo cuando el niche arranca de cero.
+const CRITICAL_BUFFER_THRESHOLD = 5;
+function volumeFor(slug) {
+  const buffer = bufferBySlug.get(slug) || 0;
+  if (buffer < CRITICAL_BUFFER_THRESHOLD) {
+    return { hashtags: 6, resultsLimit: 40, usernames: 35 }; // niche vacío: volumen completo
+  }
+  return { hashtags: 4, resultsLimit: 30, usernames: 25 }; // ya tiene algo de colchón: recorte moderado
+}
 
 async function discoverNiche(slug) {
-  const hashtags = (NICHE_HASHTAGS[slug] || []).slice(0, HASHTAGS_PER_NICHE);
+  const vol = volumeFor(slug);
+  const hashtags = (NICHE_HASHTAGS[slug] || []).slice(0, vol.hashtags);
   if (!hashtags.length) {
     console.log(`  [${slug}] sin hashtags mapeados — omitido`);
     return [];
   }
   const directUrls = hashtags.map(h => `https://www.instagram.com/explore/tags/${h}/`);
-  console.log(`  [${slug}] discovery con hashtags: ${hashtags.join(', ')}`);
+  console.log(`  [${slug}] discovery con hashtags (buffer=${bufferBySlug.get(slug) || 0}): ${hashtags.join(', ')}`);
   try {
     const posts = await apifyRunAndWait('apify~instagram-scraper', {
       directUrls,
       resultsType: 'posts',
-      resultsLimit: RESULTS_LIMIT_PER_HASHTAG_BATCH,
+      resultsLimit: vol.resultsLimit,
     }, 120000);
 
     const cutoff = Date.now() - 72 * 3600 * 1000;
     const recentPosts = posts.filter(p => p.timestamp && new Date(p.timestamp).getTime() > cutoff);
-    const usernames = [...new Set(recentPosts.map(p => p.ownerUsername).filter(Boolean))].slice(0, USERNAMES_PER_NICHE);
+    const usernames = [...new Set(recentPosts.map(p => p.ownerUsername).filter(Boolean))].slice(0, vol.usernames);
     console.log(`  [${slug}] posts recientes: ${recentPosts.length} — usernames: ${usernames.length}`);
     return usernames;
   } catch (e) {

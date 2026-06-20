@@ -1,22 +1,41 @@
 import type { APIRoute } from 'astro';
 import OpenAI from 'openai';
+import crypto from 'node:crypto';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     const formData = await request.formData();
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
-    const telegram = formData.get('telegram') as string;
     const region = formData.get('region') as string;
     const nichesRaw = formData.get('niches') as string;
     const niches: string[] = nichesRaw ? JSON.parse(nichesRaw) : [];
     const audioFile = formData.get('audio') as File;
 
-    if (!name || !email || !telegram || !audioFile) {
+    if (!name || !email || !audioFile) {
       return new Response(JSON.stringify({ error: 'Faltan campos obligatorios' }), { status: 400 });
     }
     if (!niches.length) {
       return new Response(JSON.stringify({ error: 'Selecciona al menos un nicho' }), { status: 400 });
+    }
+
+    const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+    const SB_HEADERS = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`,
+      'apikey': import.meta.env.SUPABASE_SERVICE_KEY,
+    };
+
+    // Si ya existe una cuenta activa y vinculada con este email, no se permite sobrescribirla
+    // sin verificación — evita que alguien que solo conoce el email de otro closer le robe
+    // la cuenta re-registrándose con sus propios datos de Telegram.
+    const existingRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/closers?email=eq.${encodeURIComponent(email)}&select=id,telegram_chat_id`,
+      { headers: SB_HEADERS }
+    );
+    const existing: { id: string; telegram_chat_id: string | null }[] = existingRes.ok ? await existingRes.json() : [];
+    if (existing.length > 0 && existing[0].telegram_chat_id) {
+      return new Response(JSON.stringify({ error: 'Ya existe una cuenta activa con este email. Si necesitas hacer cambios, escríbenos.' }), { status: 409 });
     }
 
     // 1. Transcribir audio con Whisper
@@ -69,48 +88,48 @@ Devuelve SOLO el JSON, sin texto adicional:
       toneProfile = JSON.parse(raw.replace(/```json?\s*/gi, '').replace(/```/g, '').trim());
     } catch { /* usa el fallback */ }
 
-    // 3. Convertir slugs de nichos a UUIDs
-    const nicheSlugs = niches.join(',');
-    const nichesRes = await fetch(
-      `${import.meta.env.SUPABASE_URL}/rest/v1/niches?slug=in.(${nicheSlugs})&select=id`,
-      { headers: { 'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`, 'apikey': import.meta.env.SUPABASE_SERVICE_KEY } }
-    );
-    const nicheRows: { id: string }[] = nichesRes.ok ? await nichesRes.json() : [];
+    // 3. Convertir slugs de nichos a UUIDs — solo se aceptan slugs con formato válido
+    // (defensa en profundidad: nunca interpolar entrada del usuario sin validar en un filtro)
+    const validSlugs = niches.filter(s => /^[a-z0-9-]+$/.test(s));
+    const nicheSlugs = validSlugs.join(',');
+    const nichesRes = nicheSlugs
+      ? await fetch(`${SUPABASE_URL}/rest/v1/niches?slug=in.(${nicheSlugs})&select=id`, { headers: SB_HEADERS })
+      : null;
+    const nicheRows: { id: string }[] = nichesRes?.ok ? await nichesRes.json() : [];
     const nicheIds = nicheRows.map(r => r.id);
 
-    // 4. Crear closer en Supabase
-    const sbRes = await fetch(`${import.meta.env.SUPABASE_URL}/rest/v1/closers?on_conflict=email`, {
+    // 4. Generar token único de vinculación — el closer lo usa para conectar su Telegram
+    // vía un enlace profundo (/start <token>) en vez de que el sistema confíe en un username
+    // que cualquiera podría escribir.
+    const linkToken = crypto.randomBytes(16).toString('hex');
+
+    // 5. Crear/actualizar closer en Supabase
+    const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/closers?on_conflict=email`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`,
-        'apikey': import.meta.env.SUPABASE_SERVICE_KEY,
-        'Prefer': 'return=minimal,resolution=merge-duplicates',
-      },
+      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal,resolution=merge-duplicates' },
       body: JSON.stringify({
         email,
         tone_profile: {
           ...toneProfile,
           region_preference: region,
           name,
-          telegram_username: telegram,
         },
         status: 'active',
         timezone: 'Europe/Madrid',
         mode: 'both',
         selected_niches: nicheIds,
+        link_token: linkToken,
       }),
     });
 
     if (!sbRes.ok) {
-      const err = await sbRes.text();
-      throw new Error(`Supabase: ${err}`);
+      console.error('Supabase onboarding error:', await sbRes.text());
+      throw new Error('No se pudo completar el registro');
     }
 
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, linkToken }), { status: 200 });
   } catch (err: unknown) {
     console.error('Onboarding error:', err);
-    const msg = err instanceof Error ? err.message : 'Error interno';
-    return new Response(JSON.stringify({ error: msg }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Error interno, inténtalo de nuevo' }), { status: 500 });
   }
 };
