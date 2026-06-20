@@ -248,7 +248,7 @@ ${transcripts.slice(0, 3).map(t => t.text?.slice(0, 400)).join('\n---\n')}`;
           vo = {
             area: 'Embudo',
             observation: friction || fs.promesa || 'Tiene landing activa',
-            suggested_value: strength ? `Reforzar ${strength.toLowerCase()}` : 'Mejorar conversión del embudo',
+            suggested_value: strength ? `Reforzar ${strength.toLowerCase()}` : 'Ayudar a que más gente acabe comprando',
           };
         }
       } catch {}
@@ -282,6 +282,12 @@ INSTRUCCIONES CRÍTICAS:
 - MÁXIMO 40 palabras. Menos es más.
 - NO expliques el insight en el mensaje. Solo insinúalo.
 - PROHIBIDO: adulación de cualquier tipo, preguntas abiertas al final, "te llevo siguiendo".
+- PROHIBIDO usar anglicismos técnicos que nombren una página o paso concreto del funnel
+  (opt-in, checkout, upsell, downsell, thank you page, landing). El closer tiene experiencia en
+  ventas y conoce términos generales como "embudo" o "conversión" sin problema — pero si el
+  infoproductor pregunta "¿a qué te refieres?" sobre un anglicismo técnico muy específico y el
+  closer no sabe explicarlo, delata que detrás hay una IA. Usa siempre el nombre en español llano:
+  "la página donde pide el email", "la página de pago", "lo que ofrece después de comprar".
 - Empieza por el trigger, no por el @handle ni por "Hola".
 
 Devuelve SOLO el texto del mensaje. Sin comillas, sin explicaciones.`;

@@ -2,8 +2,39 @@ import type { APIRoute } from 'astro';
 import OpenAI from 'openai';
 import crypto from 'node:crypto';
 
-export const POST: APIRoute = async ({ request }) => {
+const MAX_REQUESTS_PER_WINDOW = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hora
+const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // 20 MB — Whisper rechaza por encima de 25 MB
+
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
+    const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+    const SB_HEADERS = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`,
+      'apikey': import.meta.env.SUPABASE_SERVICE_KEY,
+    };
+
+    // Rate limiting por IP — cada petición cuesta dinero real (Whisper + Claude). Sin esto,
+    // cualquiera podría vaciar el presupuesto de API con un script simple. Se comprueba antes
+    // de hacer ningún trabajo costoso.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || clientAddress || 'unknown';
+    const rateCutoff = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const rateCheckRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/rate_limits?identifier=eq.${encodeURIComponent(ip)}&endpoint=eq.onboarding&created_at=gte.${rateCutoff}&select=id`,
+      { headers: SB_HEADERS }
+    );
+    const recentAttempts: { id: string }[] = rateCheckRes.ok ? await rateCheckRes.json() : [];
+    if (recentAttempts.length >= MAX_REQUESTS_PER_WINDOW) {
+      return new Response(JSON.stringify({ error: 'Demasiados intentos. Inténtalo de nuevo en una hora.' }), { status: 429 });
+    }
+    // Se registra el intento ya aquí (no solo si tiene éxito) para que los reintentos cuenten.
+    await fetch(`${SUPABASE_URL}/rest/v1/rate_limits`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ identifier: ip, endpoint: 'onboarding' }),
+    });
+
     const formData = await request.formData();
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
@@ -18,13 +49,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (!niches.length) {
       return new Response(JSON.stringify({ error: 'Selecciona al menos un nicho' }), { status: 400 });
     }
-
-    const SUPABASE_URL = import.meta.env.SUPABASE_URL;
-    const SB_HEADERS = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.SUPABASE_SERVICE_KEY}`,
-      'apikey': import.meta.env.SUPABASE_SERVICE_KEY,
-    };
+    if (audioFile.size > MAX_AUDIO_BYTES) {
+      return new Response(JSON.stringify({ error: 'El audio pesa demasiado (máximo 20 MB).' }), { status: 400 });
+    }
 
     // Si ya existe una cuenta activa y vinculada con este email, no se permite sobrescribirla
     // sin verificación — evita que alguien que solo conoce el email de otro closer le robe

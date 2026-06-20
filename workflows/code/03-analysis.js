@@ -305,13 +305,25 @@ IMPORTANTE: escribe tu análisis siempre en español neutro, sin modismos region
 textual de la landing como evidencia, puedes citarla literal entre comillas, pero tu propio texto
 de análisis debe ser siempre neutro.
 
+IMPORTANTE — evita anglicismos técnicos de funnel: este análisis lo lee un closer con experiencia
+en ventas, que conoce de sobra términos como "embudo", "conversión" o "lead magnet" — esos no son
+el problema. El problema son los anglicismos muy específicos que nombran una página o paso
+técnico concreto (opt-in, checkout, upsell, downsell, thank you page, landing) que un closer de
+ventas no tiene por qué conocer, y si el infoproductor le pregunta "¿qué quieres decir?" se queda
+bloqueado — delatando que el mensaje lo escribió una IA. Cuando te refieras a una página o paso
+así, nómbralo en español llano:
+- "opt-in" / "opt-in page" → "la página donde pide tu email" o "el formulario para apuntarte"
+- "checkout" → "la página de pago"
+- "upsell" / "downsell" → "lo que le ofrece después de comprar" / "la alternativa más barata que le ofrece"
+- "landing" → "su página" o "su web"
+
 Te paso el texto de la landing de un infoproductor. Analiza:
-1. PROMESA principal (1 frase)
-2. ESTRUCTURA: qué secciones tiene y en qué orden
+1. PROMESA principal (1 frase, en lenguaje llano)
+2. ESTRUCTURA: qué secciones tiene y en qué orden (nombra cada página/paso en español llano, ej. "la página donde pide el email", no "opt-in")
 3. PRUEBA SOCIAL: ¿hay? ¿dónde? ¿qué tipo?
-4. CTA: ¿qué pide?
-5. FRICCIONES: máximo 3 cosas que podrían bajar conversión
-6. FORTALEZAS: máximo 2 cosas que están haciendo bien
+4. CTA: ¿qué pide? — descríbelo en palabras llanas, ej. "le pide que reserve una llamada"
+5. FRICCIONES: máximo 3 cosas concretas que podrían estar frenando las ventas, en lenguaje cotidiano
+6. FORTALEZAS: máximo 2 cosas que están haciendo bien, en lenguaje cotidiano
 7. ALTO_TICKET: ¿es una oferta de alto ticket? Considera alto ticket: mentoría personalizada,
    acompañamiento 1:1, consultoría premium, programas con aplicación o llamada de venta previa,
    o precio mencionado superior a 300-500€/$. Considera bajo ticket: cursos grabados masivos,
@@ -381,6 +393,18 @@ IMPORTANTE: este texto lo lee el closer, no el infoproductor — escribe "observ
 infoproductor escriba en sus reels o posts con un dialecto distinto (ej. argentino, mexicano).
 No imites su tono al redactar tu análisis. Si necesitas citar una frase textual suya como
 evidencia, puedes hacerlo entre comillas, pero el resto de tu redacción debe ser neutro.
+
+MUY IMPORTANTE — evita anglicismos técnicos de funnel: el closer tiene experiencia en ventas y
+conoce de sobra términos como "embudo", "conversión" o "lead magnet" — eso no es el problema.
+El problema son los anglicismos muy específicos que nombran una página o paso técnico concreto
+(opt-in, checkout, upsell, downsell, thank you page, landing) y que un closer de ventas no tiene
+por qué conocer. Si el infoproductor pregunta "¿a qué te refieres?" y el closer no sabe explicar
+el término exacto, delata que detrás hay una IA. Cuando te refieras a una página o paso así,
+nómbralo en español llano:
+- "opt-in page" → "la página donde pide el email" / "el formulario para apuntarte"
+- "checkout" → "la página de pago"
+- "upsell" / "downsell" → "lo que ofrece justo después de comprar" / "la alternativa más barata"
+- "landing" → "su página" o "su web"
 
 Devuelve SOLO el JSON array, sin texto adicional, sin bloques de código markdown. Empieza con [ y acaba con ].
 Formato: { "area": "Embudo"|"Reels"|"Posicionamiento"|"Oferta"|"Anuncios", "observation": "...", "suggested_value": "..." }`;

@@ -60,13 +60,23 @@ function detectRegion(profile) {
     'venezuela', 'ecuador', 'bolivia', 'uruguay', 'paraguay', 'costa rica',
     'bogotá', 'medellín', 'cali', 'buenos aires', 'lima', 'santiago',
     'monterrey', 'guadalajara', 'cdmx', 'caracas', 'guayaquil', 'quito',
+    // Más ciudades — la lista anterior solo cubría capitales, dejaba pasar otras muy comunes
+    'puebla', 'tijuana', 'querétaro', 'queretaro', 'mérida', 'merida',
+    'cancún', 'cancun', 'toluca', 'acapulco', 'veracruz', 'culiacán', 'culiacan',
+    'barranquilla', 'cartagena', 'bucaramanga', 'córdoba', 'cordoba', 'rosario',
+    'mendoza', 'arequipa', 'trujillo', 'maracaibo', 'valencia, venezuela',
+    'montevideo', 'asunción', 'asuncion', 'la paz', 'santa cruz de la sierra',
+    // Miami/Florida: geográficamente EEUU, pero hub cultural y de negocio para LATAM —
+    // un infoproductor que menciona Miami casi siempre vende a audiencia latinoamericana
+    'miami', 'florida', 'doral', 'brickell', 'hialeah', 'kendall',
     '.mx/', '.co/', '.ar/', '.pe/', '.cl/', '.ve/', '.ec/', '.bo/', '.uy/',
     '+52', '+54', '+57', '+51', '+56', '+58',
     'wa.me/52', 'wa.me/54', 'wa.me/57', 'wa.me/51', 'wa.me/56', 'wa.me/58',
-    '🇲🇽', '🇨🇴', '🇦🇷', '🇵🇪', '🇨🇱',
+    '🇲🇽', '🇨🇴', '🇦🇷', '🇵🇪', '🇨🇱', '🇺🇸',
     // Modismos / vocabulario característico del español latinoamericano
     ' ustedes', ' platicar', ' chevere', ' celular', ' carro ', ' plata ',
-    ' chido', ' bacán', ' parce', ' pana ',
+    ' chido', ' bacán', ' parce', ' pana ', ' chamba', ' lana ', ' órale',
+    ' no manches', ' qué onda', ' parcero', ' bacano',
   ];
 
   const spainCount = spainSigns.filter(s => text.includes(s)).length;
